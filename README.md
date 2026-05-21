@@ -1,14 +1,16 @@
 # 简易 AI 工具箱 (SimpleAI Toolbox)
 
-一站式 AI 工具桌面应用。内置 **184 个专业 Agent 角色**、塔罗/八字/紫微等命理解读、**36 个开发者工具**（含图片/视频生成）、**75 个 HTML 模板生成器**、**Claude Code 终端**，配置一个 API Key 即可使用全部功能。
+一站式 AI 工具桌面应用。内置 **184 个专业 Agent 角色**、塔罗/八字/紫微等命理解读、**39 个开发者工具**（含图片/视频生成、PowerShell、Sleep、工具搜索）、**75 个 HTML 模板生成器**、**Claude Code 终端**，配置一个 API Key 即可使用全部功能。
 
 > 所有数据仅保存在本地，不上传任何服务器。
+
+![首页](docs/screenshots/home.png)
 
 ---
 
 ## 下载安装
 
-前往 [Releases](../../releases) 页面下载最新的 **`SimpleAI-1.0.1-Setup.exe`**（约 149 MB），双击安装即可。
+前往 [Releases](../../releases) 页面下载最新的 **`SimpleAI-1.0.4-Setup.exe`**（约 149 MB），双击安装即可。
 
 安装包内已封装 Claude Code CLI，首次启动会自动尝试在线更新到最新版，若网络不可用则直接使用封装版。
 
@@ -80,6 +82,9 @@
 
 **9 个 Slash 命令：** `/help` `/clear` `/compact` `/plan` `/tools` `/skills` `/skill <name>` `/todos` `/tasks`
 
+> 对话历史在 History 页统一管理，最多保留 50 条：
+> ![对话历史](docs/screenshots/conversation-history.png)
+
 ### 4. Claude Code 终端
 
 - 内置 Claude Code CLI（封装在安装包中，约 236 MB）
@@ -87,6 +92,9 @@
 - 支持选择工作目录、启动/重启/终止进程
 - 一键在线更新 CLI 到最新版
 - 未安装时自动释放封装版，也可作为普通命令行终端使用
+- **v1.0.2+**：会话结束后自动保存原始 ANSI 输出到本地，📚 历史按钮打开抽屉用只读 xterm 彩色重放
+
+![Claude Code 终端](docs/screenshots/terminal.png)
 
 ### 5. MCP 服务器
 
@@ -110,7 +118,9 @@
 
 生成的图片/视频直接在对话中内联展示，可继续基于结果修改或生成新内容。
 
-多模态模型端点可独立配置（不同 API 地址和 Key），也可使用 MiniToken 统一端点。
+多模态模型端点可独立配置（不同 API 地址和 Key），也可使用 MiniToken 统一端点。**v1.0.4+**：图像/视频生成期间显示对应 SVG 占位动画；大图附件（>1MB）会显示 ⚠️ token 风险提醒。
+
+![图像生成与上传演示](docs/screenshots/image-upload.png)
 
 ### 7. HTML 万物生成
 
@@ -127,7 +137,11 @@
 | 海报/帧 | 13 | 报纸海报、像素动画、胶片漏光 |
 | 其他 | 8 | 简历、发票、手机截图、营销邮件 |
 
-输入 Markdown / CSV / JSON / 纯文本 → AI 生成精美单文件 HTML → 实时预览 → 一键下载。
+输入 Markdown / CSV / JSON / 纯文本 → AI 生成精美单文件 HTML → 实时预览 → 一键下载。**v1.0.2+**：左侧大卡片侧边栏选模板（emoji + 名称 + 描述全展示）；Electron 下「💾 导出到本地」会弹原生保存框并用默认浏览器自动打开 file:// URL。
+
+![HTML 万物生成器](docs/screenshots/html-anything.png)
+
+> 一份完整导出样例：[docs/screenshots/html-anything-export-example.html](docs/screenshots/html-anything-export-example.html)
 
 ### 8. 多模型支持
 
@@ -274,6 +288,10 @@ simple-ai/
 4. 选择或输入模型名称
 5. 点击「测试连接」验证
 
+**v1.0.2+ 新增**：保存 / 测试 / MiniToken 应用后会自动入档；每条档案可独立配置 SOCKS5 代理（支持 `user:pass@host:port` 认证），切档自动应用。
+
+![设置页](docs/screenshots/settings.png)
+
 ### API Key 获取
 
 | 服务商 | 说明 | 地址 |
@@ -305,3 +323,11 @@ simple-ai/
 MIT — 自由使用、修改、分发。
 
 命理功能仅供娱乐参考，不构成任何专业建议。
+
+---
+
+## 文档与变更
+
+- 📜 **变更日志**：[CHANGELOG.md](docs/CHANGELOG.md) — 每个版本的完整改动列表
+- 🔧 **工具对照表**：[TOOLS_COMPARISON.md](docs/TOOLS_COMPARISON.md) — simple-ai 与 Anthropic Claude Code 内置工具的差异表
+- 📸 **截图目录**：[docs/screenshots/](docs/screenshots/)
