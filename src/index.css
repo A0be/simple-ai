@@ -1,0 +1,337 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    background: #f6f7f9;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei',
+      'Helvetica Neue', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  button {
+    -webkit-appearance: none;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl-soft bg-white shadow-card transition-all;
+  }
+
+  .card-hover {
+    @apply hover:shadow-card-hover hover:-translate-y-0.5 active:translate-y-0;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn bg-ink-900 text-white hover:bg-ink-700 active:bg-ink-800;
+  }
+
+  .btn-secondary {
+    @apply btn bg-ink-100 text-ink-800 hover:bg-ink-200;
+  }
+
+  .btn-ghost {
+    @apply btn text-ink-600 hover:bg-ink-100;
+  }
+
+  .input {
+    @apply w-full px-4 py-3 rounded-xl border border-ink-200 bg-white text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-ink-900 focus:border-transparent transition-all;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-ink-700 mb-1.5;
+  }
+
+  .chip {
+    @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-ink-100 text-ink-600;
+  }
+}
+
+.markdown {
+  line-height: 1.7;
+  word-wrap: break-word;
+}
+.markdown h1 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 1rem 0 0.5rem;
+  color: #0f172a;
+}
+.markdown h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0.9rem 0 0.45rem;
+  color: #0f172a;
+}
+.markdown h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0.75rem 0 0.4rem;
+  color: #1e293b;
+}
+.markdown p {
+  margin: 0.5rem 0;
+}
+.markdown ul,
+.markdown ol {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+.markdown li {
+  margin: 0.2rem 0;
+}
+.markdown ul li {
+  list-style: disc;
+}
+.markdown ol li {
+  list-style: decimal;
+}
+.markdown code {
+  background: #f1f5f9;
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.35rem;
+  font-size: 0.9em;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+}
+.markdown pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 0.9rem;
+  border-radius: 0.6rem;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+}
+.markdown pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+}
+.markdown blockquote {
+  border-left: 3px solid #cbd5e1;
+  padding: 0.25rem 0.9rem;
+  color: #475569;
+  margin: 0.6rem 0;
+  background: #f8fafc;
+  border-radius: 0.3rem;
+}
+.markdown table {
+  border-collapse: collapse;
+  margin: 0.6rem 0;
+  font-size: 0.92rem;
+}
+.markdown th,
+.markdown td {
+  border: 1px solid #e2e8f0;
+  padding: 0.35rem 0.6rem;
+  text-align: left;
+}
+.markdown th {
+  background: #f1f5f9;
+}
+.markdown a {
+  color: #0369a1;
+  text-decoration: underline;
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ---------- 塔罗抽卡动画 ---------- */
+.tarot-stage {
+  perspective: 1200px;
+  perspective-origin: 50% 50%;
+}
+
+.tarot-card {
+  position: relative;
+  width: 100px;
+  height: 160px;
+  transform-style: preserve-3d;
+  transition: transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1.05);
+}
+
+@media (min-width: 640px) {
+  .tarot-card {
+    width: 120px;
+    height: 192px;
+  }
+}
+
+.tarot-card .face {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 20px -4px rgba(15, 23, 42, 0.25);
+  overflow: hidden;
+}
+
+.tarot-card .back {
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255,255,255,0.15), transparent 40%),
+    linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
+  border: 2px solid #6366f1;
+}
+
+.tarot-card .back::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border: 1px solid rgba(165, 180, 252, 0.4);
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.tarot-card .back::after {
+  content: '✦';
+  font-size: 32px;
+  color: #fde68a;
+  text-shadow: 0 0 12px rgba(253, 224, 71, 0.6);
+}
+
+.tarot-card .front {
+  transform: rotateY(180deg);
+  background: linear-gradient(150deg, #fffbeb 0%, #fef3c7 100%);
+  border: 2px solid #b45309;
+  flex-direction: column;
+  padding: 6px;
+  text-align: center;
+}
+
+.tarot-card .front::before {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 1px solid #d97706;
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.tarot-card.flipped {
+  transform: rotateY(180deg);
+}
+
+.tarot-card.reversed.flipped {
+  transform: rotateY(180deg) rotate(180deg);
+}
+
+.tarot-card.shuffle {
+  animation: tarot-shuffle 0.5s ease-in-out;
+}
+
+@keyframes tarot-shuffle {
+  0% { transform: translateX(0) rotate(0deg); }
+  25% { transform: translateX(-8px) rotate(-4deg); }
+  50% { transform: translateX(8px) rotate(4deg); }
+  75% { transform: translateX(-4px) rotate(-2deg); }
+  100% { transform: translateX(0) rotate(0deg); }
+}
+
+.tarot-card.deal-in {
+  animation: tarot-deal 0.6s cubic-bezier(0.34, 1.36, 0.64, 1) forwards;
+  opacity: 0;
+}
+
+@keyframes tarot-deal {
+  0% {
+    opacity: 0;
+    transform: translateY(-40px) rotateY(0deg) scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotateY(0deg) scale(1);
+  }
+}
+
+.tarot-fan-card {
+  transition: transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1);
+  cursor: pointer;
+}
+
+.tarot-fan-card:hover {
+  transform: translateY(-12px) scale(1.05);
+}
+
+/* 牌堆叠效果 */
+.tarot-deck {
+  position: relative;
+  width: 100px;
+  height: 160px;
+}
+
+.tarot-deck.shuffle-deck {
+  animation: tarot-deck-shuffle 1.4s ease-in-out;
+}
+
+@keyframes tarot-deck-shuffle {
+  0% { transform: rotate(0deg); }
+  15% { transform: translateX(-10px) rotate(-6deg); }
+  30% { transform: translateX(10px) rotate(6deg); }
+  45% { transform: translateX(-6px) rotate(-3deg); }
+  60% { transform: translateX(6px) rotate(3deg); }
+  80% { transform: translateX(-2px) rotate(-1deg); }
+  100% { transform: rotate(0deg); }
+}
+
+.tarot-deck::before,
+.tarot-deck::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255,255,255,0.1), transparent 40%),
+    linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
+  border: 1px solid #4338ca;
+}
+
+.tarot-deck::before {
+  transform: translate(-3px, -3px);
+  opacity: 0.8;
+}
+
+.tarot-deck::after {
+  transform: translate(-1.5px, -1.5px);
+  opacity: 0.9;
+}
+

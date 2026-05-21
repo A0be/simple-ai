@@ -1,0 +1,196 @@
+/**
+ * Agent loop — the core multi-turn tool-dispatch state machine.
+ *
+ * On each call:
+ * 1. Send current message log to the model (streaming, with tools).
+ * 2. While the model emits tool_calls (not just text):
+ *    - Append assistant message with tool_calls to log.
+ *    - Dispatch each tool_call, capture results.
+ *    - Append role:'tool' results to log.
+ *    - Loop.
+ * 3. When model emits text content without tool_calls → finished.
+ *
+ * Streaming callbacks let the UI update progressively.
+ */
+import type { ChatMessage, ToolCall } from '@/types'
+import { streamChat, ApiError } from './ai'
+import type { ToolContext, ToolRegistry, ToolResult, SessionState, ToolUiBridge } from './tools/types'
+import { isTauri as detectTauri } from './tauri'
+import { isElectron as detectElectron } from './electron'
+import type { ApiConfig } from '@/types'
+
+export interface RunAgentOptions {
+  config: ApiConfig
+  /** the persistent message log; mutated in-place as the loop runs */
+  messages: ChatMessage[]
+  /** tool registry */
+  registry: ToolRegistry
+  /** session state (todos, tasks, plan mode) */
+  session: SessionState
+  /** UI bridge for AskUserQuestion + notifications */
+  ui: ToolUiBridge
+  signal?: AbortSignal
+  /** max tool-dispatch iterations (default 12) */
+  maxTurns?: number
+  /** override which tools are exposed (default: env-appropriate) */
+  toolFilter?: (toolName: string) => boolean
+  /** called with each thinking/reasoning delta */
+  onThinkingText?: (delta: string) => void
+  /** called with each text delta from the assistant */
+  onText?: (delta: string) => void
+  /** called when an assistant message (with optional tool_calls) is complete */
+  onAssistantMessage?: (msg: ChatMessage) => void
+  /** called when a tool starts running */
+  onToolStart?: (call: ToolCall) => void
+  /** called when a tool finishes */
+  onToolEnd?: (call: ToolCall, result: ToolResult) => void
+  /** called when the entire turn finishes (model emitted text without tool_calls) */
+  onFinish?: () => void
+}
+
+export async function runAgent(opts: RunAgentOptions): Promise<void> {
+  const {
+    config,
+    messages,
+    registry,
+    session,
+    ui,
+    signal,
+    maxTurns = 12,
+    toolFilter,
+    onThinkingText,
+    onText,
+    onAssistantMessage,
+    onToolStart,
+    onToolEnd,
+    onFinish
+  } = opts
+  const isTauri = detectTauri()
+  const isDesktop = isTauri || detectElectron()
+  const runEnv: 'web' | 'tauri' = isTauri ? 'tauri' : 'web'
+
+  for (let turn = 0; turn < maxTurns; turn++) {
+    if (signal?.aborted) return
+    // Filter tools by env + custom filter + plan mode rules
+    const allTools = registry.list(runEnv).filter((t) => {
+      if (toolFilter && !toolFilter(t.name)) return false
+      if (session.planMode && t.planSafe === false) return false
+      return true
+    })
+    const toolSchemas = allTools.map((t) => ({
+      type: 'function',
+      function: {
+        name: t.name,
+        description: t.description,
+        parameters: t.parameters
+      }
+    }))
+
+    // Insert an in-progress assistant message we stream into
+    const liveAssistant: ChatMessage = { role: 'assistant', content: '', display: 'normal' }
+    // Separate thinking message (inserted before the assistant if thinking occurs)
+    let thinkingMsg: ChatMessage | null = null
+    messages.push(liveAssistant)
+
+    let streamedToolCalls: ToolCall[] = []
+    try {
+      const res = await streamChat({
+        config,
+        messages: messages.slice(0, -1), // don't include the live assistant itself
+        temperature: 0.4,
+        tools: toolSchemas.length ? toolSchemas : undefined,
+        signal,
+        onThinkingChunk: (delta) => {
+          if (!thinkingMsg) {
+            thinkingMsg = { role: 'assistant', content: '', display: 'thinking' }
+            // Insert thinking message BEFORE the live assistant
+            const idx = messages.indexOf(liveAssistant)
+            messages.splice(idx, 0, thinkingMsg)
+          }
+          thinkingMsg.content += delta
+          onThinkingText?.(delta)
+        },
+        onChunk: (delta) => {
+          liveAssistant.content += delta
+          onText?.(delta)
+        }
+      })
+      // After streaming, finalize
+      liveAssistant.content = res.content
+      liveAssistant.tool_calls = res.toolCalls.length ? res.toolCalls : undefined
+      if (thinkingMsg) thinkingMsg.content = res.thinking
+      streamedToolCalls = res.toolCalls
+    } catch (e) {
+      // Remove the live placeholder; surface error as a system note
+      messages.pop()
+      if (e instanceof ApiError) throw e
+      throw e
+    }
+
+    onAssistantMessage?.(liveAssistant)
+
+    // If no tool_calls, we're done
+    if (!streamedToolCalls.length) {
+      onFinish?.()
+      return
+    }
+
+    // Dispatch each tool_call
+    for (const tc of streamedToolCalls) {
+      if (signal?.aborted) return
+      onToolStart?.(tc)
+      const def = registry.get(tc.name)
+      let result: ToolResult
+      if (!def) {
+        result = { content: `Unknown tool: ${tc.name}`, isError: true }
+      } else if (def.env && def.env !== 'both' && def.env !== runEnv) {
+        result = {
+          content: `Tool ${tc.name} is not available in ${runEnv} runtime. Run the Tauri desktop build to use it.`,
+          isError: true
+        }
+      } else if (session.planMode && def.planSafe === false) {
+        result = {
+          content: `Tool ${tc.name} is blocked in plan mode. Use ExitPlanMode to enable it.`,
+          isError: true
+        }
+      } else {
+        const ctx: ToolContext = {
+          config,
+          signal,
+          call: tc,
+          history: () => messages.map((m) => ({ role: m.role, content: m.content })),
+          ui,
+          registry,
+          session,
+          isTauri,
+          isDesktop
+        }
+        try {
+          result = await def.run(tc.arguments, ctx)
+        } catch (e) {
+          result = {
+            content: `Tool ${tc.name} threw: ${(e as Error).message}`,
+            isError: true
+          }
+        }
+      }
+      const toolMsg: ChatMessage = {
+        role: 'tool',
+        tool_call_id: tc.id,
+        name: tc.name,
+        content: result.content
+      }
+      messages.push(toolMsg)
+      onToolEnd?.(tc, result)
+    }
+  }
+
+  // Exceeded turn budget — append a system note
+  messages.push({
+    role: 'tool',
+    tool_call_id: `budget_${Date.now()}`,
+    name: 'system',
+    content: `Tool-call budget (${maxTurns}) exceeded. Stopping.`
+  })
+  onFinish?.()
+}

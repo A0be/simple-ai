@@ -1,0 +1,3 @@
+# Tauri 自动生成
+/target
+Cargo.lock

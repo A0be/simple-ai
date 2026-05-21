@@ -1,0 +1,48 @@
+# 依赖
+node_modules
+.pnp
+.pnp.js
+
+# 构建产物
+dist
+dist-ssr
+*.local
+build
+.vite
+
+# 编辑器
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# 日志
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# 环境变量
+.env
+.env.local
+.env.*.local
+
+# Tauri
+src-tauri/target
+src-tauri/Cargo.lock
+
+# Electron build output
+out
+dist-exe
+dist-electron
+release
+resources/claude
+
+# Rust / Companion build
+companion/target
+src-tauri/target
