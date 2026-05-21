@@ -4,6 +4,23 @@
 
 ---
 
+## v1.0.5 — 2026-05-22
+
+### 新增工具（3 个，对齐 Anthropic Claude Code 高优先级清单）
+- **`PowerShellTool`** ([powerShell.ts](../src/lib/tools/builtin/powerShell.ts))：Windows 上通过 `powershell.exe -NoProfile -ExecutionPolicy Bypass -Command` 执行命令。在 macOS/Linux 上立即拒绝并提示用 Bash。复用 Bash 的 `shellExec` 路径，含 plan-mode 阻断
+- **`SleepTool`** ([sleep.ts](../src/lib/tools/builtin/sleep.ts))：让 Agent 暂停 N 秒（cap 300s）。响应 `ctx.signal` 中止；用于轮询外部状态/等待远程任务
+- **`ToolSearchTool`** ([toolSearch.ts](../src/lib/tools/builtin/toolSearch.ts))：按关键字模糊搜索已注册工具（name 100/40 分、description 5 分），返回 top N（默认 10、最多 30）。读时安全，plan mode 允许
+
+### 文档
+- **README 嵌入功能截图**：首页 / 设置 / 终端 / HTML 万物生成 / 多模态 / 对话历史 6 张图入对应小节
+- README 末尾新增「文档与变更」区，跳转 CHANGELOG / TOOLS_COMPARISON / screenshots/
+- [TOOLS_COMPARISON.md](TOOLS_COMPARISON.md) 标记三个新工具已实现，剩余高优先级未做：`TaskOutputTool` / `TaskStopTool`（已在 v1.0.0 实现）/ `BriefTool` / `ConfigTool`
+
+### 工具数变化
+- 36 → **39 个内置工具**
+
+---
+
 ## v1.0.4 — 2026-05-22
 
 ### 新增

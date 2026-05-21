@@ -56,21 +56,21 @@
 
 ### 3. 开发者工具
 
-**36 个内置工具：**
+**39 个内置工具：**
 
 | 类别 | 工具 |
 |------|------|
 | 文件操作 | `FileRead` `FileWrite` `FileEdit` `Glob` `Grep` `NotebookEdit` |
-| 命令执行 | `Bash` |
+| 命令执行 | `Bash` `PowerShell` |
 | Web | `WebFetch` `WebSearch` |
 | 多模态 | `ImageGenerate`（AI 图片生成）`VideoGenerate`（AI 视频生成） |
 | Agent | `Agent`（子任务派遣，支持并行）`SendMessage` |
 | 计划 | `EnterPlanMode` `ExitPlanMode` |
 | 任务 | `TaskCreate` `TaskList` `TaskGet` `TaskUpdate` `TaskOutput` `TaskStop` |
 | Todo | `TodoWrite` |
-| 定时 | `CronCreate` `CronList` `CronDelete` `ScheduleWakeup` |
+| 定时/等待 | `Sleep` `CronCreate` `CronList` `CronDelete` `ScheduleWakeup` |
 | LSP | `LspStart` `LspStop` `LspDefinition` `LspReferences` `LspHover` `LspList` |
-| 交互 | `AskUserQuestion` `Skill` |
+| 交互/发现 | `AskUserQuestion` `Skill` `ToolSearch` |
 | 工作树 | `EnterWorktree` `ExitWorktree` |
 | 扩展 | MCP 服务器动态注册的工具 |
 

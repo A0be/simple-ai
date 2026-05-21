@@ -41,6 +41,9 @@ import {
 } from './builtin/lsp'
 import { ImageGenerateTool } from './builtin/imageGen'
 import { VideoGenerateTool } from './builtin/videoGen'
+import { PowerShellTool } from './builtin/powerShell'
+import { SleepTool } from './builtin/sleep'
+import { ToolSearchTool } from './builtin/toolSearch'
 import { activeMcpClients } from '@/lib/mcp/client'
 
 /** Build a fresh registry with all built-in tools. */
@@ -50,6 +53,8 @@ export function buildRegistry(): ToolRegistry {
     // core
     AskUserQuestionTool,
     SkillTool,
+    ToolSearchTool,
+    SleepTool,
     // plan
     EnterPlanModeTool,
     ExitPlanModeTool,
@@ -79,6 +84,7 @@ export function buildRegistry(): ToolRegistry {
     GlobTool,
     GrepTool,
     BashTool,
+    PowerShellTool,
     NotebookEditTool,
     EnterWorktreeTool,
     ExitWorktreeTool,

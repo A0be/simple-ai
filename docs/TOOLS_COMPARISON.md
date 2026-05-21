@@ -1,8 +1,8 @@
 # 工具对照表：simple-ai vs Anthropic Claude Code (`D:/obs/AItest/ai/code`)
 
-最后更新：2026-05-22（v1.0.4）
+最后更新：2026-05-22（v1.0.5）
 
-参考实现位于 `D:/obs/AItest/ai/code/tools/`（共 41 个工具目录）。`simple-ai` 当前在 `src/lib/tools/builtin/` 实现 36 个工具，由 [tools/index.ts](../src/lib/tools/index.ts) 的 `buildRegistry()` 注册。两者并非完全对齐——本文档记录差异，作为后续迭代依据。
+参考实现位于 `D:/obs/AItest/ai/code/tools/`（共 41 个工具目录）。`simple-ai` 当前在 `src/lib/tools/builtin/` 实现 **39 个工具**，由 [tools/index.ts](../src/lib/tools/index.ts) 的 `buildRegistry()` 注册。两者并非完全对齐——本文档记录差异，作为后续迭代依据。
 
 ## 已实现（功能等价）
 
@@ -11,6 +11,9 @@
 | AgentTool | Agent | 子代理调度 |
 | AskUserQuestionTool | AskUserQuestion | 交互式问询 |
 | BashTool | Bash | Shell 命令执行 |
+| **PowerShellTool** | **PowerShell** *(v1.0.5+)* | Windows PowerShell 命令执行；其他平台拒绝 |
+| **SleepTool** | **Sleep** *(v1.0.5+)* | 同步暂停（cap 300s）；响应 abort signal |
+| **ToolSearchTool** | **ToolSearch** *(v1.0.5+)* | 关键字模糊搜索注册工具 |
 | EnterPlanModeTool | EnterPlanMode | 进入 plan 模式 |
 | ExitPlanModeTool | ExitPlanMode | 退出 plan 模式 |
 | EnterWorktreeTool | EnterWorktree | git 工作树 |
@@ -28,6 +31,8 @@
 | TaskCreateTool | TaskCreate | 任务创建 |
 | TaskGetTool | TaskGet | 获取任务详情 |
 | TaskListTool | TaskList | 任务列表 |
+| TaskOutputTool | TaskOutput | 读取后台任务输出 |
+| TaskStopTool | TaskStop | 终止后台任务 |
 | TaskUpdateTool | TaskUpdate | 更新任务 |
 | TodoWriteTool | TodoWrite | TODO 列表 |
 | WebFetchTool | WebFetch | URL 抓取 |
@@ -37,37 +42,30 @@
 | (无对应) | ImageGenerate | simple-ai 独有：图像生成 |
 | (无对应) | VideoGenerate | simple-ai 独有：视频生成 |
 
-## 尚未实现（高优先级）
-
-| Claude Code 工具 | 复刻可行性 | 备注 |
-|---|---|---|
-| **PowerShellTool** | 高 | Bash 工具在 Windows 上走 `cmd /c`，需要专门的 PowerShell 工具支持 `pwsh` |
-| **REPLTool** | 中 | 类似 Bash 但保持交互会话，需要持久化 PTY |
-| **SleepTool** | 高 | 简单的 `await new Promise(setTimeout)` 包装 |
-| **TaskOutputTool** | 中 | 读取后台任务输出（需要扩展 Task 系统） |
-| **TaskStopTool** | 中 | 终止后台任务（同上） |
-| **ToolSearchTool** | 高 | 在 registry 上做关键字搜索 |
-| **BriefTool** | 中 | 文档/代码片段压缩摘要 |
-| **ConfigTool** | 中 | 运行时读/写 settings 文件 |
-
 ## 尚未实现（中优先级）
 
 | Claude Code 工具 | 复刻可行性 | 备注 |
 |---|---|---|
+| **BriefTool** | 中 | 文档/代码片段压缩摘要 |
+| **ConfigTool** | 中 | 运行时读/写 settings 文件 |
+| **REPLTool** | 中 | 类似 Bash 但保持交互会话，需要持久化 PTY |
 | **ListMcpResourcesTool** | 中 | 列出 MCP 服务器暴露的资源（区别于 MCP 工具） |
 | **ReadMcpResourceTool** | 中 | 读取 MCP 资源内容 |
 | **McpAuthTool** | 高 | MCP OAuth 流程触发 |
 | **SyntheticOutputTool** | 中 | 合成输出（用于测试 / 演示） |
-| **TeamCreateTool** | 低 | 团队协作功能（依赖云服务） |
-| **TeamDeleteTool** | 低 | 同上 |
-| **RemoteTriggerTool** | 低 | 远程触发（依赖 Anthropic 云） |
+
+## 尚未实现（暂不计划）
+
+| Claude Code 工具 | 原因 |
+|---|---|
+| TeamCreateTool / TeamDeleteTool | 依赖 Anthropic 团队协作云服务 |
+| RemoteTriggerTool | 依赖 Anthropic 远程触发云服务 |
 
 ## 后续迭代建议
 
-1. **下一版 (v1.0.5+)**: PowerShellTool / SleepTool / ToolSearchTool（高可行性）
-2. **再下一版**: TaskOutputTool / TaskStopTool（扩展任务系统）
-3. **MCP 增强**: ListMcpResources / ReadMcpResource / McpAuth（已有 MCP 基础设施）
-4. **暂不复刻**: TeamCreate/Delete、RemoteTrigger 等依赖 Anthropic 闭源云服务的工具
+1. **下一版 (v1.0.6+)**: BriefTool / ConfigTool（文档摘要 + 运行时设置）
+2. **MCP 增强**: ListMcpResources / ReadMcpResource / McpAuth（已有 MCP 基础设施）
+3. **暂不复刻**: REPLTool（PTY 持久化复杂）、TeamCreate/Delete、RemoteTrigger 等依赖 Anthropic 闭源云服务的工具
 
 ## 关于 code 项目的说明
 
