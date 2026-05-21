@@ -14,6 +14,7 @@ import { testConnection } from '@/lib/ai'
 import { isTauri, tauriInvoke } from '@/lib/tauri'
 import { isElectron } from '@/lib/electron'
 import MiniTokenPanel from '@/components/MiniTokenPanel'
+import MarketplaceManager from '@/components/MarketplaceManager'
 
 const PRESETS: { label: string; baseUrl: string; hint?: string }[] = [
   { label: 'MiniToken', baseUrl: 'https://minitoken.top/v1', hint: 'minitoken.top 中转，支持 Claude/GPT/Gemini 等' },
@@ -614,6 +615,8 @@ export default function Settings() {
           <button onClick={() => navigate('/skills')} className="btn-ghost text-sm">管理 →</button>
         </div>
       </div>
+
+      <MarketplaceManager />
 
       <details className="card p-4 text-sm">
         <summary className="cursor-pointer font-medium text-ink-800">

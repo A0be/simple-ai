@@ -27,7 +27,7 @@ export const ImageGenerateTool: ToolDef = {
       size: { type: 'string', description: 'Image size: 1024x1024 (default), 1024x1536, 1536x1024, auto', default: '1024x1024' },
       quality: { type: 'string', description: 'Quality: auto (default), high, medium, low', default: 'auto' },
       n: { type: 'number', description: 'Number of images to generate (1-4)', default: 1 },
-      model: { type: 'string', description: 'Model to use. Default: gpt-image-1. Options: gpt-image-1, gpt-image-2, dall-e-3, midjourney, flux-1' },
+      model: { type: 'string', description: 'Model to use. Default: gpt-image-2-all (MiniToken). Options: gpt-image-2-all, gpt-image-1, dall-e-3, midjourney, flux-1' },
     },
     required: ['prompt'],
   },

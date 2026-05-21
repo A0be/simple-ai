@@ -4,6 +4,27 @@
 
 ---
 
+## v1.0.6 — 2026-05-22
+
+### 新增
+- **🧩 插件市场（Claude Code 兼容）**：Settings 新增「插件市场」折叠区
+  - 粘 GitHub 仓库 URL → 自动拉 `.claude-plugin/marketplace.json` → 列出可装 plugin
+  - 每个 plugin 点「安装」会解析其 `plugin.json#skills[]` → 拉所有 `.md` / `SKILL.md` → 注入到 `customSkills`
+  - 支持卸载（移除对应 customSkills 条目）
+  - 已测试格式：[`affaan-m/everything-claude-code`](https://github.com/affaan-m/everything-claude-code) 风格的 manifest
+  - **命令 / MCP servers 暂不支持**（plugin.json 含 commands/mcpServers 时会跳过并提示）
+- 新增 `lib/marketplace.ts`：Marketplace / InstalledPlugin 类型、CRUD、GitHub raw/contents API helper、frontmatter parser
+- 新增 `components/MarketplaceManager.tsx`：UI 组件嵌入 Settings 页
+
+### Electron 主进程
+- 新增 `marketplace:fetch_text` IPC：用 `net.request` 走 `session.defaultSession`，**自动复用现有 SOCKS5/HTTP 代理**配置；用户在某 profile 配的代理对 marketplace 拉取同样生效
+
+### 变更
+- 生图默认型号 `gpt-image-1` → **`gpt-image-2-all`**（MiniToken 网站推荐型号）
+- imageGen 工具描述同步更新
+
+---
+
 ## v1.0.5 — 2026-05-22
 
 ### 新增工具（3 个，对齐 Anthropic Claude Code 高优先级清单）

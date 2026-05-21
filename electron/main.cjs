@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, session } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog, shell, session, net } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const { exec, execSync } = require('child_process')
@@ -261,6 +261,40 @@ ipcMain.handle('proxy:get', () => ({
   url: currentProxyUrl,
   hasAuth: !!currentProxyAuth,
 }))
+
+// --- IPC: Marketplace fetch (Claude Code plugin marketplace) ---
+// Uses Electron `net.request` so requests go through the default session,
+// which means the active SOCKS/HTTP proxy applies transparently.
+ipcMain.handle('marketplace:fetch_text', async (_, { url, accept }) => {
+  return new Promise((resolve) => {
+    let body = ''
+    try {
+      const req = net.request({
+        method: 'GET',
+        url,
+        session: session.defaultSession,
+        useSessionCookies: false,
+      })
+      if (accept) req.setHeader('Accept', accept)
+      req.setHeader('User-Agent', 'simple-ai-marketplace/1.0')
+      req.on('response', (resp) => {
+        resp.on('data', (chunk) => { body += chunk.toString('utf-8') })
+        resp.on('end', () => {
+          resolve({
+            ok: resp.statusCode >= 200 && resp.statusCode < 300,
+            status: resp.statusCode,
+            body,
+          })
+        })
+        resp.on('error', (e) => resolve({ ok: false, error: e.message, body }))
+      })
+      req.on('error', (e) => resolve({ ok: false, error: e.message }))
+      req.end()
+    } catch (e) {
+      resolve({ ok: false, error: e.message })
+    }
+  })
+})
 
 // --- IPC: MiniToken Integration ---
 let minitokenWin = null

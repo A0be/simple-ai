@@ -91,7 +91,7 @@ export async function generateImage(opts: ImageGenOptions): Promise<ImageGenResu
   const url = `${base}/v1/images/generations`
 
   const body: Record<string, unknown> = {
-    model: opts.model || ep.model || 'gpt-image-1',
+    model: opts.model || ep.model || 'gpt-image-2-all',
     prompt: opts.prompt,
     n: opts.n || 1,
     size: opts.size || '1024x1024',

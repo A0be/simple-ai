@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   htmlExport: (args) => ipcRenderer.invoke('html_export', args),
   proxySet: (args) => ipcRenderer.invoke('proxy:set', args),
   proxyGet: () => ipcRenderer.invoke('proxy:get'),
+  marketplaceFetch: (args) => ipcRenderer.invoke('marketplace:fetch_text', args),
   // MiniToken
   minitokenOpen: (opts) => ipcRenderer.invoke('minitoken_open', opts || {}),
   minitokenExtractSession: () => ipcRenderer.invoke('minitoken_extract_session'),
