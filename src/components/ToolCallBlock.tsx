@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { ToolCall } from '@/types'
+import ThinkingIndicator from './ThinkingIndicator'
 
 interface Props {
   call: ToolCall
@@ -96,6 +97,56 @@ function extractMediaFromResult(name: string, resultText?: string): { images?: s
   return null
 }
 
+async function downloadMedia(url: string, suggestedName: string): Promise<void> {
+  // Best effort: for http(s) URLs we fetch+blob so `download` is honored even
+  // when the response server didn't send Content-Disposition. data:/blob:
+  // URLs use the anchor directly. If anything fails we fall back to opening
+  // the URL in a new tab so the user can still save it manually.
+  try {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      const resp = await fetch(url, { mode: 'cors' })
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      const blob = await resp.blob()
+      const objUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = objUrl
+      a.download = suggestedName
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      setTimeout(() => URL.revokeObjectURL(objUrl), 1000)
+    } else {
+      const a = document.createElement('a')
+      a.href = url
+      a.download = suggestedName
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+    }
+  } catch {
+    window.open(url, '_blank')
+  }
+}
+
+function inferExt(url: string, fallback: string): string {
+  if (url.startsWith('data:')) {
+    const m = /^data:([^;,]+)/.exec(url)
+    if (m) {
+      const mime = m[1]
+      const ext = mime.split('/')[1]
+      if (ext) return ext.split('+')[0]
+    }
+    return fallback
+  }
+  try {
+    const u = new URL(url)
+    const last = u.pathname.split('/').pop() || ''
+    const dot = last.lastIndexOf('.')
+    if (dot > 0) return last.slice(dot + 1).toLowerCase().slice(0, 5)
+  } catch { /* ignore */ }
+  return fallback
+}
+
 export default function ToolCallBlock({ call, resultText, isError, isRunning }: Props) {
   const [expanded, setExpanded] = useState(false)
   const icon = ICONS[call.name] ?? '🔧'
@@ -128,19 +179,58 @@ export default function ToolCallBlock({ call, resultText, isError, isRunning }: 
         <span className="text-xs text-ink-400 shrink-0">{expanded ? '▾' : '▸'}</span>
       </button>
 
+      {isRunning && (call.name === 'ImageGenerate' || call.name === 'VideoGenerate') && !media && (
+        <div className="px-3 pb-3">
+          <ThinkingIndicator
+            variant={call.name === 'ImageGenerate' ? 'image' : 'video'}
+            sub={call.name === 'VideoGenerate' ? '视频生成耗时较长，最长可能等待 10 分钟' : '通常 30-90 秒'}
+          />
+        </div>
+      )}
+
       {media?.images && (
         <div className="px-3 pb-3 flex flex-wrap gap-2">
-          {media.images.map((url, i) => (
-            <a key={i} href={url} target="_blank" rel="noreferrer" className="block">
-              <img src={url} alt={`Generated ${i + 1}`} className="max-w-full max-h-80 rounded-lg border border-ink-200 shadow-sm hover:shadow-md transition-shadow" loading="lazy" />
-            </a>
-          ))}
+          {media.images.map((url, i) => {
+            const ext = inferExt(url, 'png')
+            const filename = `image-${Date.now()}-${i + 1}.${ext}`
+            return (
+              <div key={i} className="relative group">
+                <a href={url} target="_blank" rel="noreferrer" className="block">
+                  <img src={url} alt={`Generated ${i + 1}`} className="max-w-full max-h-80 rounded-lg border border-ink-200 shadow-sm hover:shadow-md transition-shadow" loading="lazy" />
+                </a>
+                <button
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); downloadMedia(url, filename) }}
+                  className="absolute top-1.5 right-1.5 px-2 py-1 rounded-md bg-black/55 hover:bg-black/75 text-white text-[11px] font-medium opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
+                  title="下载原图"
+                >
+                  💾 下载
+                </button>
+              </div>
+            )
+          })}
         </div>
       )}
 
       {media?.videoUrl && (
-        <div className="px-3 pb-3">
+        <div className="px-3 pb-3 space-y-1.5">
           <video src={media.videoUrl} controls className="max-w-full max-h-80 rounded-lg border border-ink-200" />
+          <div>
+            <button
+              onClick={() => downloadMedia(media.videoUrl!, `video-${Date.now()}.${inferExt(media.videoUrl!, 'mp4')}`)}
+              className="text-xs px-2.5 py-1 rounded-md bg-ink-900 hover:bg-ink-800 text-white"
+              title="下载视频原文件"
+            >
+              💾 下载视频
+            </button>
+            <a
+              href={media.videoUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="ml-2 text-xs text-sky-700 hover:text-sky-900"
+            >
+              在新标签打开
+            </a>
+          </div>
         </div>
       )}
 

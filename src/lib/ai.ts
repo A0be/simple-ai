@@ -1,4 +1,5 @@
 import type { ApiConfig, ChatMessage, ToolCall, Attachment } from '@/types'
+import { withRetry, type RetryInfo } from './retry'
 
 export class ApiError extends Error {
   status: number
@@ -82,6 +83,8 @@ export interface StreamOptions {
   onToolCalls?: (toolCalls: ToolCall[]) => void
   /** called for each tool_call delta to allow incremental UI render */
   onToolCallDelta?: (index: number, delta: Partial<ToolCall>) => void
+  /** notified before each retry attempt (not before the first) */
+  onRetry?: (info: RetryInfo) => void
   signal?: AbortSignal
 }
 
@@ -130,23 +133,28 @@ export async function streamChat(opts: StreamOptions): Promise<StreamResult> {
     body.tool_choice = 'auto'
   }
 
-  const response = await fetch(url, {
-    method: 'POST',
-    signal,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${config.apiKey}`
+  const response = await withRetry(
+    async (attemptSignal) => {
+      const r = await fetch(url, {
+        method: 'POST',
+        signal: attemptSignal,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${config.apiKey}`
+        },
+        body: JSON.stringify(body)
+      })
+      if (!r.ok) {
+        const text = await r.text().catch(() => '')
+        throw new ApiError(
+          `请求失败 (${r.status}): ${text.slice(0, 500) || r.statusText}`,
+          r.status
+        )
+      }
+      return r
     },
-    body: JSON.stringify(body)
-  })
-
-  if (!response.ok) {
-    const text = await response.text().catch(() => '')
-    throw new ApiError(
-      `请求失败 (${response.status}): ${text.slice(0, 500) || response.statusText}`,
-      response.status
-    )
-  }
+    { signal, onRetry: opts.onRetry },
+  )
 
   // Non-streaming fallback
   if (!useStream) {

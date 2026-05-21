@@ -543,7 +543,8 @@ export default function Settings() {
         </summary>
         <div className="mt-3 space-y-4">
           <p className="text-xs text-ink-500">
-            不配置则使用主 API 端点。MiniToken 支持所有模态，无需单独配置。
+            留空时默认走 <strong>minitoken.top</strong> 的对应 API，主 API Key 需对 MiniToken 有效。
+            如要走其他端点，请完整填写 baseUrl + Key + 模型。
           </p>
           <ModelEndpointEditor
             label="图像生成模型"

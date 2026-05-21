@@ -48,9 +48,12 @@ export default function TerminalHistoryDrawer({ open, onClose }: Props) {
     }
   }, [open])
 
-  // Init read-only terminal lazily when drawer opens
+  // Init read-only terminal lazily once the player div is in the DOM. We depend
+  // on sessions.length because the player div is only rendered when there are
+  // sessions to show — without this dep the effect runs while playerRef is null
+  // and never re-runs after sessions load.
   useEffect(() => {
-    if (!open || !playerRef.current) return
+    if (!open || !playerRef.current || sessions.length === 0) return
     const term = new Terminal({
       fontSize: 13,
       fontFamily: 'Consolas, "Courier New", monospace',
@@ -75,13 +78,18 @@ export default function TerminalHistoryDrawer({ open, onClose }: Props) {
     const ro = new ResizeObserver(() => { try { fit.fit() } catch { /* noop */ } })
     ro.observe(playerRef.current)
 
+    // Replay the currently selected session immediately so the user sees content
+    // on first click rather than a black screen.
+    const session = sessions.find(s => s.id === activeId)
+    if (session) term.write(session.rawOutput)
+
     return () => {
       ro.disconnect()
       term.dispose()
       termRef.current = null
       fitRef.current = null
     }
-  }, [open])
+  }, [open, sessions.length === 0])
 
   // Replay selected session
   useEffect(() => {

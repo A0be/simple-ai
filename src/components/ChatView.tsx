@@ -13,6 +13,7 @@ import {
 } from '@/lib/storage'
 import { findCommand, isSlashCommand, SLASH_COMMANDS } from '@/lib/slash'
 import { composeSystemPrompt } from '@/lib/prompts'
+import ThinkingIndicator from './ThinkingIndicator'
 import Markdown from './Markdown'
 import ToolCallBlock from './ToolCallBlock'
 import TodoPanel from './TodoPanel'
@@ -77,6 +78,8 @@ export default function ChatView({
   const [showSlashMenu, setShowSlashMenu] = useState(false)
   /** pending file/image attachments */
   const [attachments, setAttachments] = useState<Attachment[]>([])
+  /** retry state surfaced by streamChat (null when not retrying) */
+  const [retryInfo, setRetryInfo] = useState<{ attempt: number; total: number; reason: string } | null>(null)
 
   const abortRef = useRef<AbortController | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -269,6 +272,7 @@ export default function ChatView({
     }
 
     const log = [...baseHistory]
+    setRetryInfo(null)
     try {
       await runAgent({
         config: loadConfig(),
@@ -278,6 +282,7 @@ export default function ChatView({
         ui,
         signal: controller.signal,
         toolFilter: enableTools ? undefined : () => false,
+        onRetry: (info) => setRetryInfo(info),
         onThinkingText: () => {
           setMessages(log.filter((m) => m !== baseHistory[0]).map(cloneMessage))
         },
@@ -319,6 +324,7 @@ export default function ChatView({
       }
     } finally {
       setStreaming(false)
+      setRetryInfo(null)
       abortRef.current = null
       // Persist
       const meta: ConversationMeta = {
@@ -483,6 +489,7 @@ export default function ChatView({
             streaming={streaming && i === messages.length - 1 && m.role === 'assistant'}
             toolResults={toolResults}
             runningCalls={runningCalls}
+            retryInfo={streaming && i === messages.length - 1 && m.role === 'assistant' ? retryInfo : null}
           />
         ))}
 
@@ -519,23 +526,35 @@ export default function ChatView({
           {/* Attachment previews */}
           {attachments.length > 0 && (
             <div className="flex flex-wrap gap-2 px-2 pb-2 border-b border-ink-100 mb-2">
-              {attachments.map((att, i) => (
-                <div key={i} className="relative group">
-                  {att.type === 'image' ? (
-                    <img src={att.data} alt={att.name} className="h-16 w-16 object-cover rounded-lg border border-ink-200" />
-                  ) : (
-                    <div className="h-16 px-3 flex items-center rounded-lg border border-ink-200 bg-ink-50 text-xs text-ink-600 max-w-[140px] truncate">
-                      {att.name}
-                    </div>
-                  )}
-                  <button
+              {attachments.map((att, i) => {
+                // base64 data URLs: data:image/png;base64,XXXX — XXXX length × 3/4 ≈ bytes
+                const approxBytes = att.type === 'image' && att.data.startsWith('data:')
+                  ? Math.floor((att.data.length - att.data.indexOf(',') - 1) * 0.75)
+                  : att.data.length
+                const tooLarge = att.type === 'image' && approxBytes > 1024 * 1024
+                return (
+                  <div key={i} className="relative group">
+                    {att.type === 'image' ? (
+                      <img src={att.data} alt={att.name} className={`h-16 w-16 object-cover rounded-lg border ${tooLarge ? 'border-amber-400 ring-1 ring-amber-300' : 'border-ink-200'}`} />
+                    ) : (
+                      <div className="h-16 px-3 flex items-center rounded-lg border border-ink-200 bg-ink-50 text-xs text-ink-600 max-w-[140px] truncate">
+                        {att.name}
+                      </div>
+                    )}
+                    {tooLarge && (
+                      <div className="absolute -top-1 -left-1 bg-amber-500 text-white text-[9px] px-1 rounded shadow" title={`图像 ≈ ${(approxBytes / 1024 / 1024).toFixed(1)}MB，可能超出模型 token 限额`}>
+                        ⚠️ 大
+                      </div>
+                    )}
+                    <button
                     onClick={() => setAttachments(a => a.filter((_, j) => j !== i))}
                     className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-ink-700 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     x
                   </button>
                 </div>
-              ))}
+                )
+              })}
             </div>
           )}
           <div className="flex items-end gap-2">
@@ -609,12 +628,14 @@ function MessageRender({
   message,
   streaming,
   toolResults,
-  runningCalls
+  runningCalls,
+  retryInfo
 }: {
   message: ChatMessage
   streaming?: boolean
   toolResults: Record<string, { text: string; error?: boolean }>
   runningCalls: Set<string>
+  retryInfo?: { attempt: number; total: number; reason: string } | null
 }) {
   const [thinkExpanded, setThinkExpanded] = useState(false)
 
@@ -673,12 +694,20 @@ function MessageRender({
   }
 
   // assistant
+  const showThinkingPlaceholder = streaming && !message.content && !hasToolCalls
   return (
     <div className="flex flex-col items-start gap-2">
+      {showThinkingPlaceholder && (
+        <ThinkingIndicator
+          variant={retryInfo ? 'retry' : 'thinking'}
+          label={retryInfo ? `正在重试…(${retryInfo.attempt}/${retryInfo.total})` : undefined}
+          sub={retryInfo?.reason}
+        />
+      )}
       {message.content && (
         <div className="max-w-[92%] sm:max-w-[85%] rounded-2xl px-4 py-2.5 bg-ink-50 text-ink-900 rounded-bl-md">
-          <Markdown content={message.content || (streaming && !hasToolCalls ? '思考中…' : '')} />
-          {streaming && message.content && (
+          <Markdown content={message.content} />
+          {streaming && (
             <span className="inline-block w-1.5 h-3.5 bg-ink-400 ml-0.5 align-middle animate-pulse" />
           )}
         </div>

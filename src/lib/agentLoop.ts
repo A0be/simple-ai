@@ -14,6 +14,7 @@
  */
 import type { ChatMessage, ToolCall } from '@/types'
 import { streamChat, ApiError } from './ai'
+import type { RetryInfo } from './retry'
 import type { ToolContext, ToolDef, ToolRegistry, ToolResult, SessionState, ToolUiBridge } from './tools/types'
 import { isTauri as detectTauri } from './tauri'
 import { isElectron as detectElectron } from './electron'
@@ -57,6 +58,8 @@ export interface RunAgentOptions {
   onToolEnd?: (call: ToolCall, result: ToolResult) => void
   /** called when the entire turn finishes (model emitted text without tool_calls) */
   onFinish?: () => void
+  /** propagated from streamChat; null when a successful response starts streaming */
+  onRetry?: (info: RetryInfo | null) => void
 }
 
 export async function runAgent(opts: RunAgentOptions): Promise<void> {
@@ -74,7 +77,8 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
     onAssistantMessage,
     onToolStart,
     onToolEnd,
-    onFinish
+    onFinish,
+    onRetry
   } = opts
   const isTauri = detectTauri()
   const isDesktop = isTauri || detectElectron()
@@ -111,6 +115,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
         temperature: 0.4,
         tools: toolSchemas.length ? toolSchemas : undefined,
         signal,
+        onRetry,
         onThinkingChunk: (delta) => {
           if (!thinkingMsg) {
             thinkingMsg = { role: 'assistant', content: '', display: 'thinking' }
@@ -122,6 +127,8 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
           onThinkingText?.(delta)
         },
         onChunk: (delta) => {
+          // First content chunk → the request is past retry territory, clear retry banner.
+          if (!liveAssistant.content) onRetry?.(null)
           liveAssistant.content += delta
           onText?.(delta)
         }
