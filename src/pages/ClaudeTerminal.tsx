@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TerminalPanel from '@/components/TerminalPanel'
+import TerminalHistoryDrawer from '@/components/TerminalHistoryDrawer'
 import { IconFolder, IconTerminal } from '@/components/Icons'
+import { saveSession, loadSessions } from '@/lib/terminalHistory'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 function api(): any { return (window as any).electronAPI }
@@ -19,6 +21,12 @@ interface TermInfo {
   claudePath: string | null
 }
 
+interface SessionMeta {
+  startedAt: number
+  cwd: string
+  mode: 'claude' | 'shell'
+}
+
 export default function ClaudeTerminal() {
   const navigate = useNavigate()
   const [termInfo, setTermInfo] = useState<TermInfo | null>(null)
@@ -28,6 +36,9 @@ export default function ClaudeTerminal() {
   const [setupBusy, setSetupBusy] = useState(false)
   const [setupMsg, setSetupMsg] = useState('')
   const [cwd, setCwd] = useState('')
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [historyCount, setHistoryCount] = useState(0)
+  const sessionMetaRef = useRef<SessionMeta | null>(null)
 
   const refresh = useCallback(async () => {
     if (!api()) return
@@ -40,6 +51,7 @@ export default function ClaudeTerminal() {
     if (!api()) return
     refresh()
     api().getWorkspace().then((w: string | null) => { if (w) setCwd(w) })
+    setHistoryCount(loadSessions().length)
   }, [refresh])
 
   const launch = useCallback(async (mode: 'claude' | 'shell' = 'claude') => {
@@ -56,14 +68,15 @@ export default function ClaudeTerminal() {
       alert(result.error)
       return
     }
+    sessionMetaRef.current = { startedAt: Date.now(), cwd: cwd || '', mode }
     setTermId(id)
     setRunning(true)
   }, [termInfo, termId, cwd])
 
   const kill = useCallback(() => {
     if (termId) api()?.termKill({ id: termId })
-    setRunning(false)
-    setTermId(null)
+    // Let onExit clean up termId/running and save history; falling through here
+    // would race the exit callback and drop the final buffer.
   }, [termId])
 
   const pickDir = useCallback(async () => {
@@ -95,8 +108,22 @@ export default function ClaudeTerminal() {
     }
   }, [refresh])
 
-  const handleExit = useCallback(() => {
+  const handleExit = useCallback((code: number, buffer: string) => {
+    const meta = sessionMetaRef.current
+    if (meta && buffer) {
+      const next = saveSession({
+        startedAt: meta.startedAt,
+        endedAt: Date.now(),
+        cwd: meta.cwd,
+        mode: meta.mode,
+        rawOutput: buffer,
+        exitCode: code < 0 ? null : code,
+      })
+      setHistoryCount(next.length)
+    }
+    sessionMetaRef.current = null
     setRunning(false)
+    setTermId(null)
   }, [])
 
   if (!api()) {
@@ -140,6 +167,14 @@ export default function ClaudeTerminal() {
           <button onClick={kill} className="btn-ghost text-xs text-red-600">终止</button>
         )}
 
+        <button
+          onClick={() => { setHistoryCount(loadSessions().length); setHistoryOpen(true) }}
+          className="btn-ghost text-xs"
+          title="查看历史会话记录"
+        >
+          📚 历史{historyCount > 0 && <span className="ml-1 text-ink-400">({historyCount})</span>}
+        </button>
+
         <div className="flex-1" />
 
         {claudeInfo?.version && (
@@ -178,7 +213,7 @@ export default function ClaudeTerminal() {
       )}
 
       {/* Terminal area */}
-      <div className="flex-1 min-h-0 bg-[#1e1e2e] rounded-b-lg overflow-hidden border-x border-b border-ink-200">
+      <div className="relative flex-1 min-h-0 bg-[#1e1e2e] rounded-b-lg overflow-hidden border-x border-b border-ink-200">
         {termId ? (
           <TerminalPanel key={termId} termId={termId} onExit={handleExit} />
         ) : (
@@ -205,6 +240,11 @@ export default function ClaudeTerminal() {
             ) : null}
           </div>
         )}
+
+        <TerminalHistoryDrawer
+          open={historyOpen}
+          onClose={() => { setHistoryOpen(false); setHistoryCount(loadSessions().length) }}
+        />
       </div>
     </div>
   )

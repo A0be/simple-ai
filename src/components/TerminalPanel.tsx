@@ -5,15 +5,22 @@ import '@xterm/xterm/css/xterm.css'
 
 interface Props {
   termId: string
-  onExit?: (code: number) => void
+  onExit?: (code: number, buffer: string) => void
 }
 
 export default function TerminalPanel({ termId, onExit }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const bufferRef = useRef('')
+  const didExitRef = useRef(false)
+  const onExitRef = useRef(onExit)
+  useEffect(() => { onExitRef.current = onExit }, [onExit])
 
   useEffect(() => {
     const api = (window as any).electronAPI
     if (!api || !containerRef.current) return
+
+    bufferRef.current = ''
+    didExitRef.current = false
 
     const term = new Terminal({
       fontSize: 14,
@@ -39,12 +46,15 @@ export default function TerminalPanel({ termId, onExit }: Props) {
     })
 
     const offData = api.onTermData(termId, (data: string) => {
+      bufferRef.current += data
       term.write(data)
     })
 
     const offExit = api.onTermExit(termId, (code: number) => {
+      if (didExitRef.current) return
+      didExitRef.current = true
       term.writeln(`\r\n\x1b[90m[进程已退出，代码: ${code}]\x1b[0m`)
-      onExit?.(code)
+      onExitRef.current?.(code, bufferRef.current)
     })
 
     const ro = new ResizeObserver(() => {
@@ -56,12 +66,18 @@ export default function TerminalPanel({ termId, onExit }: Props) {
     ro.observe(containerRef.current)
 
     return () => {
+      // If the PTY never reported exit (termId switched, route changed, etc),
+      // flush the buffer so the parent can persist it as a history entry.
+      if (!didExitRef.current && bufferRef.current) {
+        didExitRef.current = true
+        onExitRef.current?.(-1, bufferRef.current)
+      }
       ro.disconnect()
       offData()
       offExit()
       term.dispose()
     }
-  }, [termId, onExit])
+  }, [termId])
 
   return <div ref={containerRef} className="w-full h-full" />
 }

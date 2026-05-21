@@ -9,6 +9,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   pickWorkspace: () => ipcRenderer.invoke('workspace_pick'),
   setWorkspace: (p) => ipcRenderer.invoke('workspace_set', { path: p }),
   getWorkspace: () => ipcRenderer.invoke('workspace_get'),
+  htmlExport: (args) => ipcRenderer.invoke('html_export', args),
+  proxySet: (args) => ipcRenderer.invoke('proxy:set', args),
+  proxyGet: () => ipcRenderer.invoke('proxy:get'),
   // MiniToken
   minitokenOpen: (opts) => ipcRenderer.invoke('minitoken_open', opts || {}),
   minitokenExtractSession: () => ipcRenderer.invoke('minitoken_extract_session'),

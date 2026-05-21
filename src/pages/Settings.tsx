@@ -2,8 +2,17 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { ApiConfig } from '@/types'
 import { loadConfig, saveConfig } from '@/lib/storage'
+import {
+  type ApiProfile,
+  loadProfiles,
+  upsertProfile,
+  deleteProfile,
+  suggestProfileName,
+  setProfileProxy,
+} from '@/lib/profiles'
 import { testConnection } from '@/lib/ai'
 import { isTauri, tauriInvoke } from '@/lib/tauri'
+import { isElectron } from '@/lib/electron'
 import MiniTokenPanel from '@/components/MiniTokenPanel'
 
 const PRESETS: { label: string; baseUrl: string; hint?: string }[] = [
@@ -106,8 +115,96 @@ export default function Settings() {
   const [loadingModels, setLoadingModels] = useState(false)
   const [modelFilter, setModelFilter] = useState('')
   const [modelTypeFilter, setModelTypeFilter] = useState<ModelType>('all')
+  const [profiles, setProfiles] = useState<ApiProfile[]>([])
+  const [editingProxyId, setEditingProxyId] = useState<string | null>(null)
+  const [proxyDraft, setProxyDraft] = useState('')
 
-  useEffect(() => { setConfig(loadConfig()) }, [])
+  const applyProxyTo = (url: string | undefined) => {
+    if (!isElectron()) return
+    const api = (window as any).electronAPI
+    if (api?.proxySet) api.proxySet({ url: url || '' })
+  }
+
+  useEffect(() => {
+    const cfg = loadConfig()
+    setConfig(cfg)
+    const profs = loadProfiles()
+    setProfiles(profs)
+    // On boot, push the matching profile's proxy to the main process so that
+    // network requests originating from this window go out the configured route.
+    const matched = profs.find(p => p.baseUrl === cfg.baseUrl && p.apiKey === cfg.apiKey)
+    applyProxyTo(matched?.proxy)
+  }, [])
+
+  const archive = (cfg: ApiConfig, source: ApiProfile['source']) => {
+    if (!cfg.baseUrl || !cfg.apiKey) return
+    const name = suggestProfileName(cfg.baseUrl, cfg.apiKey, source)
+    const next = upsertProfile({
+      name,
+      baseUrl: cfg.baseUrl,
+      apiKey: cfg.apiKey,
+      model: cfg.model,
+      source,
+    })
+    setProfiles(next)
+    const matched = next.find(p => p.baseUrl === cfg.baseUrl && p.apiKey === cfg.apiKey)
+    applyProxyTo(matched?.proxy)
+  }
+
+  const applyProfile = (p: ApiProfile) => {
+    const next: ApiConfig = {
+      ...config,
+      baseUrl: p.baseUrl,
+      apiKey: p.apiKey,
+      model: p.model || config.model,
+    }
+    setConfig(next)
+    saveConfig(next)
+    applyProxyTo(p.proxy)
+    setSaved(true)
+    setTestResult(null)
+    setTimeout(() => setSaved(false), 1800)
+  }
+
+  const removeProfile = (id: string) => {
+    setProfiles(deleteProfile(id))
+  }
+
+  const saveProxyEdit = () => {
+    if (!editingProxyId) return
+    const trimmed = proxyDraft.trim()
+    if (trimmed && !/^(socks5|socks4|http|https):\/\/[^\s]+:\d+/i.test(trimmed)) {
+      setTestResult({ ok: false, msg: '代理格式无效，例如：socks5://127.0.0.1:1080' })
+      return
+    }
+    const next = setProfileProxy(editingProxyId, trimmed)
+    setProfiles(next)
+    const p = next.find(x => x.id === editingProxyId)
+    if (p && p.baseUrl === config.baseUrl && p.apiKey === config.apiKey) {
+      applyProxyTo(p.proxy)
+    }
+    setEditingProxyId(null)
+    setProxyDraft('')
+    setTestResult(null)
+  }
+
+  const clearProxy = (id: string) => {
+    const next = setProfileProxy(id, '')
+    setProfiles(next)
+    const p = next.find(x => x.id === id)
+    if (p && p.baseUrl === config.baseUrl && p.apiKey === config.apiKey) {
+      applyProxyTo('')
+    }
+  }
+
+  const applyMiniTokenKey = (key: string) => {
+    const next: ApiConfig = { ...config, apiKey: key, baseUrl: 'https://minitoken.top/v1' }
+    setConfig(next)
+    saveConfig(next)
+    archive(next, 'minitoken')
+    setSaved(false)
+    setTestResult(null)
+  }
 
   const update = (k: keyof ApiConfig, v: string) => {
     setConfig((c) => ({ ...c, [k]: v }))
@@ -141,6 +238,7 @@ export default function Settings() {
 
   const save = () => {
     saveConfig(config)
+    archive(config, 'manual')
     setSaved(true)
     setTimeout(() => setSaved(false), 1800)
   }
@@ -153,6 +251,7 @@ export default function Settings() {
       const reply = await testConnection(config)
       setTestResult({ ok: true, msg: `✅ 连接成功：${reply.slice(0, 30)}` })
       setSaved(true)
+      archive(config, 'manual')
       // auto-fetch models on successful test
       const ids = await fetchModels(config.baseUrl, config.apiKey)
       if (ids.length) setRemoteModels(ids)
@@ -165,6 +264,7 @@ export default function Settings() {
 
   const finishAndGo = () => {
     saveConfig(config)
+    archive(config, 'manual')
     navigate('/')
   }
 
@@ -184,7 +284,7 @@ export default function Settings() {
         </p>
       </div>
 
-      <MiniTokenPanel onKeyFound={(key) => { update('apiKey', key); update('baseUrl', 'https://minitoken.top/v1') }} />
+      <MiniTokenPanel onKeyFound={applyMiniTokenKey} />
 
       <div className="card p-5 space-y-5">
         <div>
@@ -310,6 +410,100 @@ export default function Settings() {
           </div>
         </div>
       </div>
+
+      {profiles.length > 0 && (
+        <div className="card p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <div className="font-medium text-ink-900 text-sm">💾 已保存的配置（{profiles.length}）</div>
+              <div className="text-[10px] text-ink-500 mt-0.5">
+                保存 / 测试连接 / MiniToken 应用后自动入档；每条可独立设置 SOCKS5 代理
+                {!isElectron() && <span className="text-amber-600 ml-1">（代理仅 Electron 桌面版生效）</span>}
+              </div>
+            </div>
+          </div>
+          <div className="space-y-1.5 max-h-80 overflow-y-auto">
+            {profiles.map(p => {
+              const inUse = config.baseUrl === p.baseUrl && config.apiKey === p.apiKey
+              const editing = editingProxyId === p.id
+              return (
+                <div key={p.id} className={`rounded-lg border px-2.5 py-1.5 ${
+                  inUse ? 'bg-emerald-50 border-emerald-200' : 'bg-ink-50 border-ink-100'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 font-medium ${
+                      p.source === 'minitoken' ? 'bg-violet-100 text-violet-700' : 'bg-sky-100 text-sky-700'
+                    }`}>{p.source === 'minitoken' ? 'MT' : '手动'}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-medium text-ink-800 truncate" title={`${p.baseUrl} · ${p.apiKey}`}>{p.name}</div>
+                      <div className="text-[10px] text-ink-500 font-mono truncate">
+                        {p.model || '(no model)'} · ****{p.apiKey.slice(-6)}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => applyProfile(p)}
+                      disabled={inUse}
+                      className={`text-[10px] px-2 py-1 rounded transition-colors ${
+                        inUse ? 'bg-emerald-200 text-emerald-800 cursor-default' : 'bg-ink-200 hover:bg-ink-900 hover:text-white text-ink-700'
+                      }`}
+                    >
+                      {inUse ? '使用中 ✓' : '应用'}
+                    </button>
+                    <button
+                      onClick={() => removeProfile(p.id)}
+                      className="text-[10px] text-ink-400 hover:text-red-600 px-1"
+                      title="删除"
+                    >✕</button>
+                  </div>
+
+                  <div className="mt-1 ml-7 text-[10px] flex items-center gap-1.5">
+                    {editing ? (
+                      <>
+                        <input
+                          autoFocus
+                          className="input !text-[10px] !py-0.5 flex-1"
+                          value={proxyDraft}
+                          onChange={e => setProxyDraft(e.target.value)}
+                          placeholder="socks5://user:pass@127.0.0.1:1080  (留空=直连)"
+                          spellCheck={false}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') saveProxyEdit()
+                            else if (e.key === 'Escape') { setEditingProxyId(null); setProxyDraft('') }
+                          }}
+                        />
+                        <button onClick={saveProxyEdit} className="text-emerald-700 hover:text-emerald-900 shrink-0">保存</button>
+                        <button onClick={() => { setEditingProxyId(null); setProxyDraft('') }} className="text-ink-400 hover:text-ink-700 shrink-0">取消</button>
+                      </>
+                    ) : p.proxy ? (
+                      <>
+                        <span className="text-emerald-700 font-mono truncate flex-1" title={p.proxy}>
+                          🔒 {p.proxy.replace(/(:\/\/[^:]+:)[^@]+(@)/, '$1***$2')}
+                        </span>
+                        {inUse && <span className="text-emerald-600 shrink-0">· 生效中</span>}
+                        <button
+                          onClick={() => { setEditingProxyId(p.id); setProxyDraft(p.proxy || '') }}
+                          className="text-ink-500 hover:text-ink-900 shrink-0"
+                          title="编辑代理"
+                        >✎</button>
+                        <button
+                          onClick={() => clearProxy(p.id)}
+                          className="text-ink-400 hover:text-red-600 shrink-0"
+                          title="清除代理"
+                        >清除</button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => { setEditingProxyId(p.id); setProxyDraft('') }}
+                        className="text-ink-500 hover:text-ink-900"
+                      >+ 添加 SOCKS5 代理</button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       <details className="card p-4 text-sm">
         <summary className="cursor-pointer font-medium text-ink-800">

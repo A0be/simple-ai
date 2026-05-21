@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog, shell, session } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const { exec, execSync } = require('child_process')
@@ -15,6 +15,8 @@ if (!gotLock) { app.quit(); return }
 
 let mainWindow = null
 let workspace = null
+let currentProxyAuth = null // { user, pass } when active proxy needs auth
+let currentProxyUrl = '' // last-applied proxy URL (informational only)
 
 function getIconPath() {
   if (isDev) return path.join(__dirname, '../public/icons/icon-512.png')
@@ -175,6 +177,90 @@ ipcMain.handle('workspace_set', (_, { path: p }) => {
 })
 
 ipcMain.handle('workspace_get', () => workspace)
+
+// --- IPC: Export HTML to a user-picked path and open in default browser ---
+ipcMain.handle('html_export', async (_, { content, defaultName }) => {
+  try {
+    const safeName = String(defaultName || 'output').replace(/[\\/:*?"<>|]+/g, '_').slice(0, 80)
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: '导出 HTML',
+      defaultPath: `${safeName}.html`,
+      filters: [{ name: 'HTML', extensions: ['html'] }],
+    })
+    if (result.canceled || !result.filePath) return { canceled: true }
+    await fs.promises.writeFile(result.filePath, content, 'utf-8')
+    const openErr = await shell.openPath(result.filePath)
+    return { ok: true, path: result.filePath, openError: openErr || null }
+  } catch (e) {
+    return { ok: false, message: e.message }
+  }
+})
+
+// --- IPC: SOCKS/HTTP proxy switch (applies to default session = all windows) ---
+function parseProxyUrl(raw) {
+  if (!raw || !String(raw).trim()) return null
+  try {
+    const u = new URL(String(raw).trim())
+    const protocol = u.protocol.replace(':', '').toLowerCase()
+    if (!['socks5', 'socks4', 'http', 'https'].includes(protocol)) return null
+    if (!u.hostname || !u.port) return null
+    const user = u.username ? decodeURIComponent(u.username) : ''
+    const pass = u.password ? decodeURIComponent(u.password) : ''
+    return {
+      rules: `${protocol}://${u.hostname}:${u.port}`,
+      auth: (user || pass) ? { user, pass } : null,
+    }
+  } catch {
+    return null
+  }
+}
+
+// Login handler is registered on demand. Why: once a 'login' listener is attached
+// to a session, Electron stops falling back to the OS / Chromium default behavior,
+// so any unrelated HTTP 401 (e.g. inside the MiniToken popup) would be silently
+// cancelled. We only attach it while a proxy with credentials is active.
+let proxyLoginHandler = null
+function attachProxyLoginHandler() {
+  if (proxyLoginHandler) return
+  proxyLoginHandler = (event, _details, authInfo, callback) => {
+    if (authInfo.isProxy && currentProxyAuth) {
+      event.preventDefault()
+      callback(currentProxyAuth.user, currentProxyAuth.pass)
+    }
+  }
+  session.defaultSession.on('login', proxyLoginHandler)
+}
+function detachProxyLoginHandler() {
+  if (!proxyLoginHandler) return
+  session.defaultSession.removeListener('login', proxyLoginHandler)
+  proxyLoginHandler = null
+}
+
+ipcMain.handle('proxy:set', async (_, { url }) => {
+  try {
+    const parsed = parseProxyUrl(url)
+    if (!parsed) {
+      currentProxyAuth = null
+      currentProxyUrl = ''
+      detachProxyLoginHandler()
+      await session.defaultSession.setProxy({ mode: 'direct' })
+      return { ok: true, mode: 'direct' }
+    }
+    currentProxyAuth = parsed.auth
+    currentProxyUrl = url
+    if (parsed.auth) attachProxyLoginHandler()
+    else detachProxyLoginHandler()
+    await session.defaultSession.setProxy({ proxyRules: parsed.rules })
+    return { ok: true, rules: parsed.rules, hasAuth: !!parsed.auth }
+  } catch (e) {
+    return { ok: false, message: e.message }
+  }
+})
+
+ipcMain.handle('proxy:get', () => ({
+  url: currentProxyUrl,
+  hasAuth: !!currentProxyAuth,
+}))
 
 // --- IPC: MiniToken Integration ---
 let minitokenWin = null

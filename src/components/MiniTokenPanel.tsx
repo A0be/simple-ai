@@ -97,6 +97,14 @@ export default function MiniTokenPanel({ onKeyFound }: Props) {
     onKeyFound?.(k)
   }
 
+  const handleRefreshAndApply = async () => {
+    if (!session) return
+    // Reset the auto-apply guard so the next tokens load re-applies the first
+    // available key to Settings (covers re-issuing after a key was rotated).
+    autoKeyApplied.current = false
+    await refreshData(session)
+  }
+
   const handleLogout = () => {
     saveMiniTokenSession(null)
     setSession(null)
@@ -153,8 +161,11 @@ export default function MiniTokenPanel({ onKeyFound }: Props) {
           </div>
         </div>
         <div className="flex gap-1.5">
-          <button onClick={() => refreshData(session)} disabled={loading} className="btn-ghost text-xs">
-            {loading ? '刷新中…' : '🔄 刷新'}
+          <button onClick={handleRefreshAndApply} disabled={loading} className="btn-ghost text-xs" title="重新从 MiniToken 拉取 key 与地址并写入 Settings">
+            {loading ? '刷新中…' : '🔁 刷新 API'}
+          </button>
+          <button onClick={() => refreshData(session)} disabled={loading} className="btn-ghost text-xs" title="仅刷新余额/日志">
+            {loading ? '…' : '🔄'}
           </button>
           {electron && (
             <button onClick={() => openMiniToken('/console')} className="btn-ghost text-xs">
