@@ -4,13 +4,14 @@
 
 ## 模块总览
 
-项目按功能划分为 **8 大模块**，总计 9500+ 行源码、70+ 文件。
+项目按功能划分为 **8 大模块**，总计 11000+ 行源码、80+ 文件。
 
 ```
 ┌─────────────────────────────────────────────────────┐
 │                    Pages (路由页面)                     │
 │  Home / Settings / Agents / AgentChat / Feature      │
-│  History / Marketplace / Mcp / Skills / Tools        │
+│  History / HtmlAnything / Mcp / Skills / Tools       │
+│  ClaudeTerminal                                      │
 ├──────────────┬──────────────┬───────────────────────┤
 │  Components  │  Divination  │    MiniToken Panel     │
 │  ChatView    │  BaziIntro   │    CompanionStatus     │
@@ -24,14 +25,14 @@
 │ ┌──────────┐ ┌───────────┐ ┌──────────┐ ┌─────────┐ │
 │ │ AI 通信   │ │ Agent 系统 │ │ 工具系统  │ │多模态 API│ │
 │ │ ai.ts    │ │ agentLoop │ │ tools/*  │ │multimodal│ │
-│ │          │ │ agents.ts │ │ 28 tools │ │ 图/音/视频│ │
+│ │          │ │ agents.ts │ │ 36 tools │ │ 图/音/视频│ │
 │ │          │ │ prompts   │ │          │ │          │ │
 │ └──────────┘ └───────────┘ └──────────┘ └─────────┘ │
 │ ┌──────────┐ ┌───────────┐ ┌──────────┐ ┌─────────┐ │
 │ │ MCP 协议  │ │ 技能系统   │ │ 存储层   │ │平台抽象层│ │
 │ │ mcp/*    │ │ skills.ts │ │storage.ts│ │localBack-│ │
 │ │          │ │ slash.ts  │ │favorites │ │end/tauri │ │
-│ │          │ │           │ │workspace │ │/electron │ │
+│ │          │ │htmlSkills │ │workspace │ │/electron │ │
 │ └──────────┘ └───────────┘ └──────────┘ └─────────┘ │
 ├─────────────────────────────────────────────────────┤
 │              Platform Layer (平台层)                   │
@@ -69,8 +70,8 @@ ai.ts
 ## 模块 2: Agent 系统
 
 **文件**:
-- `src/lib/agentLoop.ts` (181 行) — 多轮工具调度循环
-- `src/lib/agents.ts` (266 行) — 150+ 角色定义
+- `src/lib/agentLoop.ts` (238 行) — 多轮工具调度循环（支持并行执行只读工具）
+- `src/lib/agents.ts` (265 行) — 184 个角色定义
 - `src/lib/agentCapabilities.ts` (74 行) — 能力检测
 - `src/lib/agentHistory.ts` (40 行) — 子代理历史
 - `src/lib/prompts.ts` (456 行) — Prompt 模板
@@ -83,7 +84,11 @@ runAgent(options)
   ├── 发送对话 → streamChat()
   │
   ├── 收到 tool_calls?
-  │   ├── 是 → 逐个执行工具 → 结果追加到 messages → 重新发送（循环）
+  │   ├── 是 → 分类工具调用
+  │   │   ├── 只读工具（FileRead/Glob/Grep/WebFetch/WebSearch/ImageGenerate/VideoGenerate/LSP/MCP）
+  │   │   │   └── 2+ 个并行 → Promise.all()；1 个 → 降级为顺序
+  │   │   └── 写入工具（FileWrite/FileEdit/Bash 等）→ 严格顺序执行
+  │   ├── 结果追加到 messages → 重新发送（循环）
   │   └── 否 → 结束
   │
   ├── plan 模式过滤：planMode=true 时只允许 planSafe 工具
@@ -111,7 +116,7 @@ agents.ts
 │   ├── game         游戏娱乐
 │   └── research     学术研究
 │
-└── AGENTS (150+ 角色定义)
+└── AGENTS (184 个角色定义)
     每个角色: { id, name, nameEn, emoji, category, desc, expertise, whenToUse }
 ```
 
@@ -143,7 +148,7 @@ agentCapabilities.ts
 
 ## 模块 3: 工具系统
 
-**文件**: `src/lib/tools/` (12 个文件，1800+ 行)
+**文件**: `src/lib/tools/` (18 个文件，2700+ 行)
 
 ### 架构
 
@@ -151,9 +156,10 @@ agentCapabilities.ts
 tools/
 ├── types.ts        → ToolDef、ToolRegistry、ToolContext、SessionState 定义
 ├── index.ts        → buildRegistry() 注册所有工具 + MCP 动态工具
-└── builtin/        → 28 个内置工具实现
+└── builtin/        → 36 个内置工具实现
     ├── 文件操作 (6)    FileRead/FileWrite/FileEdit/Glob/Grep/Bash
     ├── Web 操作 (2)    WebFetch/WebSearch
+    ├── 多模态 (2)      ImageGenerate/VideoGenerate
     ├── 任务管理 (7)    TodoWrite + TaskCreate/List/Get/Update/Output/Stop
     ├── 计划模式 (2)    EnterPlanMode/ExitPlanMode
     ├── Agent (2)      Agent/SendMessage
@@ -233,7 +239,7 @@ multimodal.ts
 ├── hasVideoModel()          → 检查视频模型是否可用
 │
 └── 模型列表常量
-    ├── IMAGE_MODELS: gpt-image-1, dall-e-3, midjourney, flux-1, seedream-3 ...
+    ├── IMAGE_MODELS: gpt-image-1, gpt-image-2, dall-e-3, midjourney, flux-1, seedream-3 ...
     ├── AUDIO_MODELS: tts-1, tts-1-hd, whisper-1, gpt-4o-audio
     └── VIDEO_MODELS: veo-2, veo-3, sora-2, kling-video, seedance-1-6 ...
 ```
@@ -394,9 +400,10 @@ ChatView.handleSend()
         │
         ├── 收到 tool_calls?
         │   ├── registry.get(toolName) → 找到工具定义
-        │   ├── tool.execute(args, context) → 执行
+        │   ├── 分类：只读 → 并行执行 / 写入 → 顺序执行
         │   │   ├── 文件工具 → localBackend → Electron/Tauri/Companion
         │   │   ├── Web 工具 → fetch
+        │   │   ├── 多模态工具 → multimodal API（图片/视频生成）
         │   │   ├── Agent 工具 → 递归 runAgent（子代理）
         │   │   └── MCP 工具 → mcpClient.callTool()
         │   ├── 结果追加到 messages（role: 'tool'）

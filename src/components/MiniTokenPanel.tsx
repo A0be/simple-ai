@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { isElectron } from '@/lib/electron'
 import {
   type MiniTokenSession,
@@ -66,6 +66,20 @@ export default function MiniTokenPanel({ onKeyFound }: Props) {
   useEffect(() => {
     if (session) refreshData(session)
   }, [session, refreshData])
+
+  // Auto-fill first available key on login
+  useEffect(() => {
+    if (!tokens.length || !onKeyFound) return
+    const active = tokens.filter(t => t.status === 1)
+    if (active.length && !autoKeyApplied.current) {
+      autoKeyApplied.current = true
+      const best = active[0]
+      const k = best.key.startsWith('sk-') ? best.key : `sk-${best.key}`
+      onKeyFound(k)
+    }
+  }, [tokens, onKeyFound])
+
+  const autoKeyApplied = useRef(false)
 
   // Auto-refresh every 30s
   useEffect(() => {
@@ -153,6 +167,17 @@ export default function MiniTokenPanel({ onKeyFound }: Props) {
         </div>
       </div>
 
+      {/* Group cost warning */}
+      {user.group && user.group !== 'default' && (
+        <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 flex items-start gap-2">
+          <span className="text-amber-600 shrink-0 mt-0.5">⚠️</span>
+          <div className="text-xs text-amber-800 leading-relaxed">
+            <strong>当前分组: {user.group}</strong> — 非默认分组可能使用更高级模型自动路由，
+            单次请求费用可能显著高于默认分组。建议在使用前确认<a href="https://minitoken.top/console" target="_blank" rel="noreferrer" className="underline">控制台</a>的分组倍率设置。
+          </div>
+        </div>
+      )}
+
       {/* Balance */}
       <div className="grid grid-cols-3 gap-2">
         <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-2.5 text-center">
@@ -173,6 +198,11 @@ export default function MiniTokenPanel({ onKeyFound }: Props) {
       {tokens.length > 0 && (
         <div>
           <div className="text-xs font-medium text-ink-700 mb-1.5">API Key（点击自动填入）</div>
+          {tokens.some(t => t.status === 1 && t.remain_quota < 0) && (
+            <div className="text-[10px] text-amber-700 bg-amber-50 rounded px-2 py-1 mb-1.5">
+              部分令牌为无限额度，使用时请注意消费监控
+            </div>
+          )}
           <div className="space-y-1 max-h-24 overflow-y-auto">
             {tokens.filter(t => t.status === 1).map(t => (
               <button

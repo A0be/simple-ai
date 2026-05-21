@@ -80,6 +80,14 @@ export const FEATURES: FeatureCard[] = [
     path: '/developer',
     emoji: '🛠',
     category: 'system'
+  },
+  {
+    id: 'html-anything',
+    title: 'HTML 万物生成',
+    description: '75 个模板，AI 生成精美 HTML 页面、幻灯片、海报',
+    path: '/html-anything',
+    emoji: '🎨',
+    category: 'system'
   }
 ]
 

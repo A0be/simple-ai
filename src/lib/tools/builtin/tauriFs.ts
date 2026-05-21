@@ -16,8 +16,12 @@ function noCwd(name: string): ToolResult {
   }
 }
 
+const IS_WIN = typeof navigator !== 'undefined'
+  && /win/i.test((navigator as any).userAgentData?.platform || navigator.platform || '')
+
 function normalizePath(p: string): string {
-  return p.replace(/\\/g, '/').toLowerCase()
+  const s = p.replace(/\\/g, '/')
+  return IS_WIN ? s.toLowerCase() : s
 }
 
 async function checkPathPermission(targetPath: string, ctx: ToolContext): Promise<ToolResult | null> {
@@ -25,7 +29,7 @@ async function checkPathPermission(targetPath: string, ctx: ToolContext): Promis
   if (!cwd) return noCwd('文件操作')
   const normalTarget = normalizePath(targetPath)
   const normalCwd = normalizePath(cwd)
-  if (normalTarget.startsWith(normalCwd)) return null
+  if (normalTarget === normalCwd || normalTarget.startsWith(normalCwd + '/')) return null
   // Outside cwd — ask for confirmation
   const answer = await ctx.ui.askUserQuestion({
     question: `工具请求访问工作目录以外的路径：\n${targetPath}\n\n当前工作目录：${cwd}\n\n是否允许？`,

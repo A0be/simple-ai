@@ -1,6 +1,6 @@
 # 工具参考手册
 
-SimpleAI 内置 28 个工具，全部通过 OpenAI tool_calls 格式调用。
+SimpleAI 内置 36 个工具，全部通过 OpenAI tool_calls 格式调用。
 
 ## 工具列表
 
@@ -21,6 +21,13 @@ SimpleAI 内置 28 个工具，全部通过 OpenAI tool_calls 格式调用。
 |------|------|------|------|
 | **WebFetch** | `url`, `maxLength?` | 抓取网页内容（15 分钟缓存） | 全部 |
 | **WebSearch** | `query`, `maxResults?` | DuckDuckGo 搜索 | 全部 |
+
+### 多模态 (2 个)
+
+| 工具 | 参数 | 说明 | 环境 |
+|------|------|------|------|
+| **ImageGenerate** | `prompt`, `size?`, `quality?`, `n?`, `model?` | AI 图片生成（gpt-image-1/2、dall-e-3、midjourney、flux） | 全部 |
+| **VideoGenerate** | `prompt`, `model?`, `duration?`, `size?`, `image_url?` | AI 视频生成（veo-2/3、sora-2、kling-video、seedance） | 全部 |
 
 ### 任务管理 (7 个)
 
@@ -45,7 +52,7 @@ SimpleAI 内置 28 个工具，全部通过 OpenAI tool_calls 格式调用。
 
 | 工具 | 参数 | 说明 | 环境 |
 |------|------|------|------|
-| **Agent** | `prompt`, `agentId?`, `model?` | 派遣子代理（最多 6 轮，工具子集） | 全部 |
+| **Agent** | `prompt`, `allow_write?`, `model?`, `max_turns?` | 派遣子代理（默认只读，allow_write 开启写权限，最多 12 轮） | 全部 |
 | **SendMessage** | `to`, `message` | 给已有子代理发送消息（续接上下文） | 全部 |
 
 ### 技能 (1 个)
@@ -73,8 +80,8 @@ SimpleAI 内置 28 个工具，全部通过 OpenAI tool_calls 格式调用。
 
 | 工具 | 参数 | 说明 | 环境 |
 |------|------|------|------|
-| **EnterWorktree** | `branch?` | 创建 Git worktree 隔离工作区 | Tauri |
-| **ExitWorktree** | — | 退出并清理 worktree | Tauri |
+| **EnterWorktree** | `name?`, `repo_path?`, `base_branch?`, `path?` | 创建或进入 Git worktree 隔离工作区 | Tauri |
+| **ExitWorktree** | `action`, `discard_changes?` | 退出 worktree（keep 保留 / remove 删除） | Tauri |
 
 ### LSP 语言服务 (6 个)
 
@@ -105,7 +112,14 @@ SimpleAI 内置 28 个工具，全部通过 OpenAI tool_calls 格式调用。
 
 计划模式（EnterPlanMode）下只允许执行标记为 `planSafe: true` 的工具：
 
-`TodoWrite`, `AskUserQuestion`, `WebFetch`, `WebSearch`, `Skill`, `EnterPlanMode`, `ExitPlanMode`
+`TodoWrite`, `AskUserQuestion`, `WebFetch`, `WebSearch`, `Skill`, `EnterPlanMode`, `ExitPlanMode`, `ImageGenerate`, `VideoGenerate`
+
+## 并行工具调度
+
+Agent loop 将工具分为只读和写入两类：
+
+- **只读工具**（FileRead、Glob、Grep、WebFetch、WebSearch、TaskList、TaskGet、TaskOutput、TodoWrite、LSP 系列、ImageGenerate、VideoGenerate、所有 MCP 工具）：多个同时调用时自动并行执行（Promise.all）
+- **写入工具**（FileWrite、FileEdit、Bash、NotebookEdit 等）：严格顺序执行
 
 ## MCP 动态工具
 

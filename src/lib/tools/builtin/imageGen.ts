@@ -1,0 +1,73 @@
+import type { ToolDef, ToolResult } from '../types'
+import { parseToolArgs } from '../types'
+import { generateImage, type ImageGenResult } from '@/lib/multimodal'
+
+interface Input {
+  prompt: string
+  size?: string
+  quality?: string
+  n?: number
+  model?: string
+}
+
+export const ImageGenerateTool: ToolDef = {
+  name: 'ImageGenerate',
+  description:
+    'Generate images from a text prompt using AI image models (gpt-image-1/gpt-image-2/dall-e-3/midjourney/flux). ' +
+    'Use this tool when the user asks to create, draw, generate, design, or produce an image or picture. ' +
+    'If the user says "generate image" without a detailed prompt, craft a rich descriptive prompt for them first, ' +
+    'then call this tool. When the user wants to modify a previous image, describe the desired changes in the prompt. ' +
+    'Returns image URLs that will be displayed inline in the chat.',
+  category: 'misc',
+  planSafe: true,
+  parameters: {
+    type: 'object',
+    properties: {
+      prompt: { type: 'string', description: 'Detailed image description prompt. Be specific about style, composition, colors, subjects.' },
+      size: { type: 'string', description: 'Image size: 1024x1024 (default), 1024x1536, 1536x1024, auto', default: '1024x1024' },
+      quality: { type: 'string', description: 'Quality: auto (default), high, medium, low', default: 'auto' },
+      n: { type: 'number', description: 'Number of images to generate (1-4)', default: 1 },
+      model: { type: 'string', description: 'Model to use. Default: gpt-image-1. Options: gpt-image-1, gpt-image-2, dall-e-3, midjourney, flux-1' },
+    },
+    required: ['prompt'],
+  },
+  async run(raw): Promise<ToolResult> {
+    const input = parseToolArgs<Input>(typeof raw === 'string' ? raw : JSON.stringify(raw))
+    if (!input.prompt) return { content: 'ImageGenerate: missing `prompt`.', isError: true }
+
+    try {
+      const results: ImageGenResult[] = await generateImage({
+        prompt: input.prompt,
+        size: input.size || '1024x1024',
+        quality: input.quality,
+        n: Math.min(input.n || 1, 4),
+        model: input.model,
+      })
+
+      if (!results.length) return { content: 'No images generated.', isError: true }
+
+      const urls = results.map((r, i) => {
+        const src = r.url || (r.b64_json ? `data:image/png;base64,${r.b64_json}` : '')
+        const revised = r.revised_prompt ? `\nRevised prompt: ${r.revised_prompt}` : ''
+        return `[Image ${i + 1}]: ${src}${revised}`
+      })
+
+      return {
+        content: `Generated ${results.length} image(s):\n\n${urls.join('\n\n')}`,
+        ui: {
+          kind: 'generic',
+          data: {
+            type: 'images',
+            images: results.map(r => ({
+              url: r.url || (r.b64_json ? `data:image/png;base64,${r.b64_json}` : ''),
+              revisedPrompt: r.revised_prompt,
+            })),
+            prompt: input.prompt,
+          },
+        },
+      }
+    } catch (e) {
+      return { content: `Image generation failed: ${(e as Error).message}`, isError: true }
+    }
+  },
+}

@@ -11,6 +11,7 @@ import SkillsPage from '@/pages/Skills'
 import Agents from '@/pages/Agents'
 import AgentChat from '@/pages/AgentChat'
 import ClaudeTerminal from '@/pages/ClaudeTerminal'
+import HtmlAnything from '@/pages/HtmlAnything'
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
         <Route path="/mcp" element={<McpServers />} />
         <Route path="/skills" element={<SkillsPage />} />
         <Route path="/claude-code" element={<ClaudeTerminal />} />
+        <Route path="/html-anything" element={<HtmlAnything />} />
         <Route path="/agents" element={<Agents />} />
         <Route path="/agent/:agentId" element={<AgentChat />} />
         <Route path="/agent/:agentId/:conversationId" element={<AgentChat />} />

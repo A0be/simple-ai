@@ -5,12 +5,14 @@ import { fileURLToPath } from 'url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, '..')
-const dest = join(root, 'resources', 'claude', 'claude.exe')
+const exeName = process.platform === 'win32' ? 'claude.exe' : 'claude'
+const dest = join(root, 'resources', 'claude', exeName)
 
 mkdirSync(dirname(dest), { recursive: true })
 
 try {
-  const raw = execSync('where claude', { encoding: 'utf-8' }).trim()
+  const findCmd = process.platform === 'win32' ? 'where claude' : 'which claude'
+  const raw = execSync(findCmd, { encoding: 'utf-8' }).trim()
   const src = raw.split(/\r?\n/)[0].trim()
   if (src && existsSync(src)) {
     console.log(`Copying Claude CLI from: ${src}`)

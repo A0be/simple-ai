@@ -353,10 +353,11 @@ export default function Settings() {
           </p>
           <ModelEndpointEditor
             label="图像生成模型"
-            hint="gpt-image-1 / dall-e-3 / midjourney"
+            hint="gpt-image-1 / gpt-image-2 / dall-e-3 / midjourney"
             value={config.imageModel}
             onChange={(v) => setConfig(c => ({ ...c, imageModel: v }))}
-            suggestedModels={['gpt-image-1', 'dall-e-3', 'midjourney', 'flux-1', 'seedream-3']}
+            suggestedModels={['gpt-image-1', 'gpt-image-2', 'dall-e-3', 'midjourney', 'flux-1', 'seedream-3']}
+            mainConfig={{ baseUrl: config.baseUrl, apiKey: config.apiKey }}
           />
           <ModelEndpointEditor
             label="音频模型（TTS/STT）"
@@ -364,6 +365,7 @@ export default function Settings() {
             value={config.audioModel}
             onChange={(v) => setConfig(c => ({ ...c, audioModel: v }))}
             suggestedModels={['tts-1', 'tts-1-hd', 'whisper-1', 'gpt-4o-audio']}
+            mainConfig={{ baseUrl: config.baseUrl, apiKey: config.apiKey }}
           />
           <ModelEndpointEditor
             label="视频生成模型"
@@ -371,6 +373,7 @@ export default function Settings() {
             value={config.videoModel}
             onChange={(v) => setConfig(c => ({ ...c, videoModel: v }))}
             suggestedModels={['veo-2', 'veo-3', 'sora-2', 'kling-video', 'seedance-1-6', 'minimax-hailuo']}
+            mainConfig={{ baseUrl: config.baseUrl, apiKey: config.apiKey }}
           />
         </div>
       </details>
@@ -452,15 +455,32 @@ export default function Settings() {
   )
 }
 
-function ModelEndpointEditor({ label, hint, value, onChange, suggestedModels }: {
+function ModelEndpointEditor({ label, hint, value, onChange, suggestedModels, mainConfig }: {
   label: string
   hint: string
   value?: { baseUrl: string; apiKey: string; model: string }
   onChange: (v: { baseUrl: string; apiKey: string; model: string } | undefined) => void
   suggestedModels: string[]
+  mainConfig?: { baseUrl: string; apiKey: string }
 }) {
   const [expanded, setExpanded] = useState(!!value?.model)
+  const [filter, setFilter] = useState('')
+  const [remoteModels, setRemoteModels] = useState<string[]>([])
+  const [loadingRemote, setLoadingRemote] = useState(false)
   const v = value || { baseUrl: '', apiKey: '', model: '' }
+  const effectiveBase = v.baseUrl || mainConfig?.baseUrl || ''
+  const effectiveKey = v.apiKey || mainConfig?.apiKey || ''
+
+  const loadRemoteModels = async () => {
+    if (!effectiveBase || !effectiveKey) return
+    setLoadingRemote(true)
+    const ids = await fetchModels(effectiveBase, effectiveKey)
+    setRemoteModels(ids)
+    setLoadingRemote(false)
+  }
+
+  const displayModels = remoteModels.length ? remoteModels : suggestedModels
+  const filtered = filter ? displayModels.filter(m => m.toLowerCase().includes(filter.toLowerCase())) : displayModels
 
   if (!expanded) {
     return (
@@ -499,19 +519,38 @@ function ModelEndpointEditor({ label, hint, value, onChange, suggestedModels }: 
         placeholder="API Key（留空使用主 Key）"
         spellCheck={false}
       />
-      <input
-        className="input !text-xs !py-1.5"
-        value={v.model}
-        onChange={e => onChange({ ...v, model: e.target.value })}
-        placeholder="模型名称"
-        spellCheck={false}
-      />
-      <div className="flex flex-wrap gap-1">
-        {suggestedModels.map(m => (
+      <div className="flex gap-1.5 items-center">
+        <input
+          className="input !text-xs !py-1.5 flex-1"
+          value={v.model}
+          onChange={e => onChange({ ...v, model: e.target.value })}
+          placeholder="模型名称"
+          spellCheck={false}
+        />
+        <button
+          onClick={loadRemoteModels}
+          disabled={loadingRemote || (!effectiveBase || !effectiveKey)}
+          className="text-[10px] text-sky-700 hover:text-sky-900 disabled:opacity-40 shrink-0 px-2"
+        >
+          {loadingRemote ? '…' : '拉取'}
+        </button>
+      </div>
+      {remoteModels.length > 0 && (
+        <input
+          className="input !text-[10px] !py-1"
+          value={filter}
+          onChange={e => setFilter(e.target.value)}
+          placeholder="搜索筛选模型…"
+          spellCheck={false}
+        />
+      )}
+      <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
+        {filtered.map(m => (
           <button key={m} onClick={() => onChange({ ...v, model: m })} className={`text-[10px] px-2 py-0.5 rounded-full ${v.model === m ? 'bg-ink-900 text-white' : 'bg-ink-100 text-ink-600 hover:bg-ink-200'}`}>
             {m}
           </button>
         ))}
+        {filter && !filtered.length && <span className="text-[10px] text-ink-400">无匹配</span>}
       </div>
     </div>
   )

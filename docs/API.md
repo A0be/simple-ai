@@ -75,7 +75,7 @@ data: [DONE]
 }
 ```
 
-**可用模型**: `gpt-image-1`, `dall-e-3`, `midjourney`, `flux-1`, `seedream-3`
+**可用模型**: `gpt-image-1`, `gpt-image-2`, `dall-e-3`, `midjourney`, `flux-1`, `seedream-3`
 
 **实现**: `src/lib/multimodal.ts` → `generateImage()`
 
@@ -225,7 +225,7 @@ Headers: `Cookie: session={session}`, `new-api-user: {userId}`
 { "jsonrpc": "2.0", "id": 1, "method": "initialize",
   "params": { "protocolVersion": "2024-11-05",
     "capabilities": { "tools": {} },
-    "clientInfo": { "name": "simple-ai", "version": "1.0.0" } } }
+    "clientInfo": { "name": "simple-ai", "version": "1.0.1" } } }
 ```
 
 ### 列出工具

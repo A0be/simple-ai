@@ -39,6 +39,8 @@ import {
   LspHoverTool,
   LspListTool
 } from './builtin/lsp'
+import { ImageGenerateTool } from './builtin/imageGen'
+import { VideoGenerateTool } from './builtin/videoGen'
 import { activeMcpClients } from '@/lib/mcp/client'
 
 /** Build a fresh registry with all built-in tools. */
@@ -86,7 +88,10 @@ export function buildRegistry(): ToolRegistry {
     LspDefinitionTool,
     LspReferencesTool,
     LspHoverTool,
-    LspListTool
+    LspListTool,
+    // multimodal
+    ImageGenerateTool,
+    VideoGenerateTool
   ])
   // Merge in dynamically-discovered MCP tools from any active clients.
   for (const mc of activeMcpClients()) {

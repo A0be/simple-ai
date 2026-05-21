@@ -157,11 +157,10 @@ export async function runViaCli(
 }
 
 function escapeShellArg(s: string): string {
-  // Simple heuristic: in a browser context we don't have process.platform,
-  // so check navigator.userAgent for Windows instead.
-  const isWin = typeof navigator !== 'undefined' && /win/i.test(navigator.platform || '')
+  const isWin = typeof navigator !== 'undefined'
+    && /win/i.test((navigator as any).userAgentData?.platform || navigator.platform || '')
   if (isWin) {
-    return `"${s.replace(/"/g, '\\"')}"`
+    return `"${s.replace(/"/g, '""')}"`
   }
   return `'${s.replace(/'/g, "'\\''")}'`
 }

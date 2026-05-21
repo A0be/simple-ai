@@ -1,6 +1,6 @@
 # 简易 AI 工具箱 (SimpleAI Toolbox)
 
-一站式 AI 工具桌面应用。内置 **184 个专业 Agent 角色**、塔罗/八字/紫微等命理解读、**34 个开发者工具**、**Claude Code 终端**，配置一个 API Key 即可使用全部功能。
+一站式 AI 工具桌面应用。内置 **184 个专业 Agent 角色**、塔罗/八字/紫微等命理解读、**36 个开发者工具**（含图片/视频生成）、**75 个 HTML 模板生成器**、**Claude Code 终端**，配置一个 API Key 即可使用全部功能。
 
 > 所有数据仅保存在本地，不上传任何服务器。
 
@@ -8,7 +8,7 @@
 
 ## 下载安装
 
-前往 [Releases](../../releases) 页面下载最新的 **`SimpleAI-1.0.0-Setup.exe`**（约 149 MB），双击安装即可。
+前往 [Releases](../../releases) 页面下载最新的 **`SimpleAI-1.0.1-Setup.exe`**（约 149 MB），双击安装即可。
 
 安装包内已封装 Claude Code CLI，首次启动会自动尝试在线更新到最新版，若网络不可用则直接使用封装版。
 
@@ -54,14 +54,15 @@
 
 ### 3. 开发者工具
 
-**34 个内置工具：**
+**36 个内置工具：**
 
 | 类别 | 工具 |
 |------|------|
 | 文件操作 | `FileRead` `FileWrite` `FileEdit` `Glob` `Grep` `NotebookEdit` |
 | 命令执行 | `Bash` |
 | Web | `WebFetch` `WebSearch` |
-| Agent | `Agent`（子任务派遣）`SendMessage` |
+| 多模态 | `ImageGenerate`（AI 图片生成）`VideoGenerate`（AI 视频生成） |
+| Agent | `Agent`（子任务派遣，支持并行）`SendMessage` |
 | 计划 | `EnterPlanMode` `ExitPlanMode` |
 | 任务 | `TaskCreate` `TaskList` `TaskGet` `TaskUpdate` `TaskOutput` `TaskStop` |
 | Todo | `TodoWrite` |
@@ -95,7 +96,40 @@
 - 实时显示连接状态和可用工具数量
 - 连接后工具自动注入到 Agent 工具链
 
-### 6. 多模型支持
+### 6. 多模态智能路由
+
+对话中自动识别用户意图，智能调用对应能力：
+
+| 能力 | 触发方式 | 使用模型 |
+|------|---------|---------|
+| **图片生成** | 对话中说"画一张…" / "生成图片" | gpt-image-1/2、dall-e-3、midjourney |
+| **图片修改** | 发送图片后说"修改这张图" | 同上（带 image_url） |
+| **视频生成** | 说"生成视频" 或从图片继续 | veo-2/3、sora-2、kling-video |
+| **语音合成** | TTS API 集成 | tts-1、tts-1-hd |
+| **语音识别** | Whisper API 集成 | whisper-1 |
+
+生成的图片/视频直接在对话中内联展示，可继续基于结果修改或生成新内容。
+
+多模态模型端点可独立配置（不同 API 地址和 Key），也可使用 MiniToken 统一端点。
+
+### 7. HTML 万物生成
+
+集成 [html-anything](https://github.com/nexu-io/html-anything) 的 **75 个精美 HTML 模板**：
+
+| 类别 | 模板数 | 示例 |
+|------|--------|------|
+| 幻灯片 | 22 | 融资 Deck、技术分享、瑞士国际、赛博终端 |
+| 文章 | 3 | 杂志文章、博客长文、电子指南 |
+| 卡片 | 8 | 小红书、推特、Spotify、Reddit |
+| 仪表板 | 8 | 看板、OKR、社媒分析、团队后台 |
+| 文档 | 6 | 三栏文档、会议纪要、产品规格 |
+| 原型 | 7 | SaaS 落地页、定价页、线框草图 |
+| 海报/帧 | 13 | 报纸海报、像素动画、胶片漏光 |
+| 其他 | 8 | 简历、发票、手机截图、营销邮件 |
+
+输入 Markdown / CSV / JSON / 纯文本 → AI 生成精美单文件 HTML → 实时预览 → 一键下载。
+
+### 8. 多模型支持
 
 兼容所有 OpenAI Chat Completions 格式的 API 端点。
 
@@ -170,7 +204,8 @@ simple-ai/
 │   │   ├── ChatView.tsx        #   核心对话界面（流式输出、工具调用、附件）
 │   │   ├── Layout.tsx          #   应用布局 + 底部导航
 │   │   ├── TerminalPanel.tsx   #   xterm.js 终端封装
-│   │   ├── ToolCallBlock.tsx   #   工具调用结果展示
+│   │   ├── ToolCallBlock.tsx   #   工具调用结果展示（含图片/视频内联渲染）
+│   │   ├── MiniTokenPanel.tsx  #   MiniToken 登录/余额/Key 管理
 │   │   ├── Markdown.tsx        #   纯 JS Markdown 渲染
 │   │   ├── Icons.tsx           #   SVG 图标组件
 │   │   └── divination/         #   命理交互组件（6 个）
@@ -180,6 +215,7 @@ simple-ai/
 │   │   ├── AgentChat.tsx       #   角色对话
 │   │   ├── Feature.tsx         #   功能页（对话/写作/翻译/命理）
 │   │   ├── ClaudeTerminal.tsx  #   Claude Code 终端
+│   │   ├── HtmlAnything.tsx   #   HTML 万物生成（75 模板 + 预览）
 │   │   ├── Settings.tsx        #   API 配置 & 模型管理
 │   │   ├── History.tsx         #   对话记录
 │   │   ├── Mcp.tsx             #   MCP 服务器管理
@@ -187,14 +223,17 @@ simple-ai/
 │   │   └── Tools.tsx           #   工具清单
 │   └── lib/
 │       ├── ai.ts               #   OpenAI 兼容 SSE 流式 API
-│       ├── agentLoop.ts        #   多轮工具调用循环（最多 12 轮）
+│       ├── agentLoop.ts        #   多轮工具调用循环（并行执行只读工具）
 │       ├── agents.ts           #   184 个 Agent 定义
+│       ├── multimodal.ts       #   图片/视频/音频/Embedding 多模态 API
+│       ├── htmlSkills.ts       #   75 个 HTML 模板元数据 + 共享设计指令
+│       ├── minitoken.ts        #   MiniToken 账户/令牌/日志 API
 │       ├── features.ts         #   10 个功能定义
 │       ├── prompts.ts          #   系统提示词模板
 │       ├── skills.ts           #   Skill 系统（内置 + 自定义）
 │       ├── slash.ts            #   Slash 命令（9 个）
 │       ├── storage.ts          #   localStorage 持久化
-│       ├── tools/              #   工具注册 & 34 个内置工具实现
+│       ├── tools/              #   工具注册 & 36 个内置工具实现
 │       ├── mcp/                #   MCP 协议客户端
 │       └── lsp/                #   LSP 语言服务客户端
 ├── public/icons/               # 应用图标

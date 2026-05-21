@@ -96,7 +96,7 @@ export const EnterWorktreeTool: ToolDef = {
     if (!/^[A-Za-z0-9._-]+$/.test(name)) {
       return { content: 'EnterWorktree: name must match [A-Za-z0-9._-]+', isError: true }
     }
-    const wtPath = `${repo}/.claude/worktrees/${name}`
+    const wtPath = `${repo.replace(/\\/g, '/')}/.claude/worktrees/${name}`
     const branch = `sai/${name}`
     const base = base_branch || 'HEAD'
     const cmd = `git worktree add -b ${branch} "${wtPath}" ${base}`

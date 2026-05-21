@@ -14,10 +14,21 @@
  */
 import type { ChatMessage, ToolCall } from '@/types'
 import { streamChat, ApiError } from './ai'
-import type { ToolContext, ToolRegistry, ToolResult, SessionState, ToolUiBridge } from './tools/types'
+import type { ToolContext, ToolDef, ToolRegistry, ToolResult, SessionState, ToolUiBridge } from './tools/types'
 import { isTauri as detectTauri } from './tauri'
 import { isElectron as detectElectron } from './electron'
 import type { ApiConfig } from '@/types'
+
+const READ_ONLY_TOOLS = new Set([
+  'FileRead', 'Glob', 'Grep', 'WebFetch', 'WebSearch',
+  'TaskList', 'TaskGet', 'TaskOutput', 'TodoWrite',
+  'LspDefinition', 'LspReferences', 'LspHover', 'LspList',
+  'ImageGenerate', 'VideoGenerate'
+])
+
+function isReadOnlyTool(name: string): boolean {
+  return READ_ONLY_TOOLS.has(name) || name.startsWith('mcp__')
+}
 
 export interface RunAgentOptions {
   config: ApiConfig
@@ -118,7 +129,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
       // After streaming, finalize
       liveAssistant.content = res.content
       liveAssistant.tool_calls = res.toolCalls.length ? res.toolCalls : undefined
-      if (thinkingMsg) thinkingMsg.content = res.thinking
+      if (thinkingMsg) (thinkingMsg as ChatMessage).content = res.thinking
       streamedToolCalls = res.toolCalls
     } catch (e) {
       // Remove the live placeholder; surface error as a system note
@@ -135,11 +146,53 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
       return
     }
 
-    // Dispatch each tool_call
+    // Dispatch each tool_call — run concurrency-safe tools in parallel
+    const concurrentCalls: { tc: ToolCall; def: ToolDef }[] = []
+    const sequentialCalls: { tc: ToolCall; def: ToolDef | undefined }[] = []
+
     for (const tc of streamedToolCalls) {
+      const def = registry.get(tc.name)
+      if (!def || (def.env && def.env !== 'both' && def.env !== runEnv) || (session.planMode && def.planSafe === false)) {
+        sequentialCalls.push({ tc, def })
+      } else if (isReadOnlyTool(tc.name)) {
+        concurrentCalls.push({ tc, def })
+      } else {
+        sequentialCalls.push({ tc, def })
+      }
+    }
+
+    // Run read-only tools in parallel
+    if (concurrentCalls.length > 1) {
+      const results = await Promise.all(
+        concurrentCalls.map(async ({ tc, def }) => {
+          if (signal?.aborted) return { tc, result: { content: 'Aborted', isError: true } as ToolResult }
+          onToolStart?.(tc)
+          const ctx: ToolContext = {
+            config, signal, call: tc,
+            history: () => messages.map((m) => ({ role: m.role, content: m.content })),
+            ui, registry, session, isTauri, isDesktop
+          }
+          try {
+            const result = await def.run(tc.arguments, ctx)
+            return { tc, result }
+          } catch (e) {
+            return { tc, result: { content: `Tool ${tc.name} threw: ${(e as Error).message}`, isError: true } as ToolResult }
+          }
+        })
+      )
+      for (const { tc, result } of results) {
+        const toolMsg: ChatMessage = { role: 'tool', tool_call_id: tc.id, name: tc.name, content: result.content }
+        messages.push(toolMsg)
+        onToolEnd?.(tc, result)
+      }
+    } else if (concurrentCalls.length === 1) {
+      sequentialCalls.unshift(concurrentCalls[0])
+    }
+
+    // Run write/unknown tools sequentially
+    for (const { tc, def } of sequentialCalls) {
       if (signal?.aborted) return
       onToolStart?.(tc)
-      const def = registry.get(tc.name)
       let result: ToolResult
       if (!def) {
         result = { content: `Unknown tool: ${tc.name}`, isError: true }
@@ -155,15 +208,9 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
         }
       } else {
         const ctx: ToolContext = {
-          config,
-          signal,
-          call: tc,
+          config, signal, call: tc,
           history: () => messages.map((m) => ({ role: m.role, content: m.content })),
-          ui,
-          registry,
-          session,
-          isTauri,
-          isDesktop
+          ui, registry, session, isTauri, isDesktop
         }
         try {
           result = await def.run(tc.arguments, ctx)
@@ -174,12 +221,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
           }
         }
       }
-      const toolMsg: ChatMessage = {
-        role: 'tool',
-        tool_call_id: tc.id,
-        name: tc.name,
-        content: result.content
-      }
+      const toolMsg: ChatMessage = { role: 'tool', tool_call_id: tc.id, name: tc.name, content: result.content }
       messages.push(toolMsg)
       onToolEnd?.(tc, result)
     }

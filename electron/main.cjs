@@ -145,6 +145,7 @@ ipcMain.handle('shell_exec', (_, { command, cwd, timeoutMs }) => {
       timeout: timeoutMs || 120_000,
       maxBuffer: 10 * 1024 * 1024,
       windowsHide: true,
+      shell: true,
     }, (error, stdout, stderr) => {
       resolve({
         stdout: stdout || '',
@@ -316,7 +317,7 @@ ipcMain.handle('claude:setup', async (_, { mode }) => {
   if (mode === 'update') {
     try {
       const out = execSync('npm install -g @anthropic-ai/claude-code@latest', {
-        windowsHide: true, timeout: 120000, encoding: 'utf-8',
+        windowsHide: true, timeout: 120000, encoding: 'utf-8', shell: true,
       })
       const p = findClaudeGlobal()
       return { ok: true, path: p, version: getClaudeVersion(p), output: out }
@@ -330,7 +331,7 @@ ipcMain.handle('claude:setup', async (_, { mode }) => {
   // auto: try online first, fallback to bundled
   try {
     execSync('npm install -g @anthropic-ai/claude-code@latest', {
-      windowsHide: true, timeout: 120000, encoding: 'utf-8',
+      windowsHide: true, timeout: 120000, encoding: 'utf-8', shell: true,
     })
     const p = findClaudeGlobal()
     if (p) return { ok: true, path: p, version: getClaudeVersion(p), source: 'online' }

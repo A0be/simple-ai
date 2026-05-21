@@ -34,6 +34,10 @@ function summarizeArgs(name: string, raw: string): string {
         return args.skill || ''
       case 'Agent':
         return args.description || ''
+      case 'ImageGenerate':
+        return (args.prompt || '').slice(0, 60)
+      case 'VideoGenerate':
+        return (args.prompt || '').slice(0, 60)
       case 'TodoWrite':
         return `${(args.todos || []).length} 条`
       case 'TaskCreate':
@@ -71,7 +75,25 @@ const ICONS: Record<string, string> = {
   TaskUpdate: '✏️',
   TaskGet: '🔍',
   TaskOutput: '📤',
-  TaskStop: '🛑'
+  TaskStop: '🛑',
+  ImageGenerate: '🎨',
+  VideoGenerate: '🎬'
+}
+
+function extractMediaFromResult(name: string, resultText?: string): { images?: string[]; videoUrl?: string } | null {
+  if (!resultText) return null
+  if (name === 'ImageGenerate') {
+    const urls: string[] = []
+    const re = /\[Image \d+\]: (https?:\/\/\S+|data:image\/\S+)/g
+    let m
+    while ((m = re.exec(resultText)) !== null) urls.push(m[1])
+    if (urls.length) return { images: urls }
+  }
+  if (name === 'VideoGenerate') {
+    const m = resultText.match(/Video URL: (https?:\/\/\S+)/)
+    if (m) return { videoUrl: m[1] }
+  }
+  return null
 }
 
 export default function ToolCallBlock({ call, resultText, isError, isRunning }: Props) {
@@ -84,6 +106,8 @@ export default function ToolCallBlock({ call, resultText, isError, isRunning }: 
     : isError
     ? 'text-red-700 bg-red-50 border-red-200'
     : 'text-green-700 bg-green-50 border-green-200'
+
+  const media = extractMediaFromResult(call.name, resultText)
 
   return (
     <div className="border border-ink-200 rounded-xl overflow-hidden bg-ink-50/50">
@@ -103,6 +127,23 @@ export default function ToolCallBlock({ call, resultText, isError, isRunning }: 
         </span>
         <span className="text-xs text-ink-400 shrink-0">{expanded ? '▾' : '▸'}</span>
       </button>
+
+      {media?.images && (
+        <div className="px-3 pb-3 flex flex-wrap gap-2">
+          {media.images.map((url, i) => (
+            <a key={i} href={url} target="_blank" rel="noreferrer" className="block">
+              <img src={url} alt={`Generated ${i + 1}`} className="max-w-full max-h-80 rounded-lg border border-ink-200 shadow-sm hover:shadow-md transition-shadow" loading="lazy" />
+            </a>
+          ))}
+        </div>
+      )}
+
+      {media?.videoUrl && (
+        <div className="px-3 pb-3">
+          <video src={media.videoUrl} controls className="max-w-full max-h-80 rounded-lg border border-ink-200" />
+        </div>
+      )}
+
       {expanded && (
         <div className="px-3 pb-3 space-y-2 border-t border-ink-200/60">
           <div>

@@ -9,6 +9,9 @@ dist-ssr
 *.local
 build
 .vite
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
 
 # 编辑器
 .vscode/*
