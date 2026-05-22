@@ -328,10 +328,18 @@ MIT — 自由使用、修改、分发。
 
 ## 文档与变更
 
-- 🏛️ **架构文档**：[ARCHITECTURE.md](docs/ARCHITECTURE.md) — 模块划分、数据流、依赖矩阵、扩展点
-- 📊 **功能状态表**：[FEATURE_STATUS.md](docs/FEATURE_STATUS.md) — 每个功能的版本/状态/限制
-- 🗺️ **后期路线图**：[ROADMAP.md](docs/ROADMAP.md) — v1.1+ 计划与技术债
-- 🔧 **工具参考**：[TOOLS.md](docs/TOOLS.md) — 42 个工具的用途、参数、示例
-- 📜 **变更日志**：[CHANGELOG.md](docs/CHANGELOG.md) — 每个版本的完整改动列表
-- 🆚 **工具对照**：[TOOLS_COMPARISON.md](docs/TOOLS_COMPARISON.md) — simple-ai vs Anthropic Claude Code
+**新会话 / 新开发者从这里开始**：
+
+- 📋 **项目交接**：[CLAUDE.md](CLAUDE.md) — 给 AI 助手 / 新加入者的全貌速读
+- 🛠️ **开发环境**：[docs/DEV_SETUP.md](docs/DEV_SETUP.md) — 从零到能跑起来的步骤、常见报错对照
+- 🤝 **贡献指南**：[docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) — 加工具/页面/IPC/Skill 的 cheat sheet
+
+**架构与状态**：
+
+- 🏛️ **架构文档**：[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — 分层、数据流、依赖矩阵、扩展点
+- 📊 **功能状态表**：[docs/FEATURE_STATUS.md](docs/FEATURE_STATUS.md) — 每个功能的版本/状态/限制
+- 🗺️ **后期路线图**：[docs/ROADMAP.md](docs/ROADMAP.md) — v1.1+ 计划与技术债
+- 🔧 **工具参考**：[docs/TOOLS.md](docs/TOOLS.md) — 42 个工具的用途、参数、示例
+- 📜 **变更日志**：[docs/CHANGELOG.md](docs/CHANGELOG.md) — 每个版本的完整改动列表
+- 🆚 **工具对照**：[docs/TOOLS_COMPARISON.md](docs/TOOLS_COMPARISON.md) — simple-ai vs Anthropic Claude Code
 - 📸 **截图目录**：[docs/screenshots/](docs/screenshots/)
