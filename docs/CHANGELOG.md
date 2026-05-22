@@ -4,6 +4,28 @@
 
 ---
 
+## v1.0.7 — 2026-05-22
+
+### 新增工具（3 个，对齐 Claude Code 剩余可复刻清单）
+- **`ConfigTool`** — model 读/写 simple-ai 的 ApiConfig：baseUrl / apiKey / model / helperModel / disableStreaming / projectContext；apiKey 读取自动 mask；写入弹 AskUserQuestion 确认
+- **`ListMcpResourcesTool`** — 列出每个已连 MCP 服务器的资源（按 `resources/list`）；服务器无该能力时静默跳过
+- **`ReadMcpResourceTool`** — 按 URI 读单个 MCP 资源（`resources/read`），合并 text/blob contents 返回；不指定 server 时遍历所有连接尝试
+
+### MCP client 扩展
+- [`mcp/client.ts`](../src/lib/mcp/client.ts) 新增 `listResources()` / `readResource(uri)` 方法；服务器无 capability 时 `listResources` 返回空数组而不抛
+- [`mcp/types.ts`](../src/lib/mcp/types.ts) 加 `McpResource` / `McpResourcesListResult` / `McpResourceContent` / `McpResourcesReadResult` 类型
+
+### 工具数变化
+- 39 → **42 个内置工具**
+
+### 明确不复刻
+- **BriefTool**（含 GrowthBook + analytics + 文件上传云服务，语义与 simple-ai chat text 重复）
+- **REPLTool**（仅是基础工具的别名集合）
+- **SyntheticOutputTool**（仅非交互式 session）
+- **McpAuthTool / TeamCreateTool / TeamDeleteTool / RemoteTriggerTool**（依赖 Anthropic OAuth / 团队 / 远程云服务）
+
+---
+
 ## v1.0.6 — 2026-05-22
 
 ### 新增

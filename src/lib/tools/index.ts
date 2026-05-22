@@ -44,6 +44,9 @@ import { VideoGenerateTool } from './builtin/videoGen'
 import { PowerShellTool } from './builtin/powerShell'
 import { SleepTool } from './builtin/sleep'
 import { ToolSearchTool } from './builtin/toolSearch'
+import { ConfigTool } from './builtin/configTool'
+import { ListMcpResourcesTool } from './builtin/listMcpResources'
+import { ReadMcpResourceTool } from './builtin/readMcpResource'
 import { activeMcpClients } from '@/lib/mcp/client'
 
 /** Build a fresh registry with all built-in tools. */
@@ -55,6 +58,9 @@ export function buildRegistry(): ToolRegistry {
     SkillTool,
     ToolSearchTool,
     SleepTool,
+    ConfigTool,
+    ListMcpResourcesTool,
+    ReadMcpResourceTool,
     // plan
     EnterPlanModeTool,
     ExitPlanModeTool,

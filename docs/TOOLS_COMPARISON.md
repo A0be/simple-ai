@@ -1,8 +1,8 @@
 # 工具对照表：simple-ai vs Anthropic Claude Code (`D:/obs/AItest/ai/code`)
 
-最后更新：2026-05-22（v1.0.5）
+最后更新：2026-05-22（v1.0.7）
 
-参考实现位于 `D:/obs/AItest/ai/code/tools/`（共 41 个工具目录）。`simple-ai` 当前在 `src/lib/tools/builtin/` 实现 **39 个工具**，由 [tools/index.ts](../src/lib/tools/index.ts) 的 `buildRegistry()` 注册。两者并非完全对齐——本文档记录差异，作为后续迭代依据。
+参考实现位于 `D:/obs/AItest/ai/code/tools/`（共 41 个工具目录）。`simple-ai` 当前在 `src/lib/tools/builtin/` 实现 **42 个工具**，由 [tools/index.ts](../src/lib/tools/index.ts) 的 `buildRegistry()` 注册。两者并非完全对齐——本文档记录差异，作为后续迭代依据。
 
 ## 已实现（功能等价）
 
@@ -14,6 +14,9 @@
 | **PowerShellTool** | **PowerShell** *(v1.0.5+)* | Windows PowerShell 命令执行；其他平台拒绝 |
 | **SleepTool** | **Sleep** *(v1.0.5+)* | 同步暂停（cap 300s）；响应 abort signal |
 | **ToolSearchTool** | **ToolSearch** *(v1.0.5+)* | 关键字模糊搜索注册工具 |
+| **ConfigTool** | **Config** *(v1.0.7+)* | 读/写 simple-ai 自己的 ApiConfig；写时 AskUserQuestion 确认 |
+| **ListMcpResourcesTool** | **ListMcpResources** *(v1.0.7+)* | 列已连 MCP 服务器的资源 |
+| **ReadMcpResourceTool** | **ReadMcpResource** *(v1.0.7+)* | 按 URI 读 MCP 资源 |
 | EnterPlanModeTool | EnterPlanMode | 进入 plan 模式 |
 | ExitPlanModeTool | ExitPlanMode | 退出 plan 模式 |
 | EnterWorktreeTool | EnterWorktree | git 工作树 |
@@ -42,30 +45,26 @@
 | (无对应) | ImageGenerate | simple-ai 独有：图像生成 |
 | (无对应) | VideoGenerate | simple-ai 独有：视频生成 |
 
-## 尚未实现（中优先级）
+## 尚未实现（核心功能/语义不匹配）
 
-| Claude Code 工具 | 复刻可行性 | 备注 |
-|---|---|---|
-| **BriefTool** | 中 | 文档/代码片段压缩摘要 |
-| **ConfigTool** | 中 | 运行时读/写 settings 文件 |
-| **REPLTool** | 中 | 类似 Bash 但保持交互会话，需要持久化 PTY |
-| **ListMcpResourcesTool** | 中 | 列出 MCP 服务器暴露的资源（区别于 MCP 工具） |
-| **ReadMcpResourceTool** | 中 | 读取 MCP 资源内容 |
-| **McpAuthTool** | 高 | MCP OAuth 流程触发 |
-| **SyntheticOutputTool** | 中 | 合成输出（用于测试 / 演示） |
+| Claude Code 工具 | 不做原因 |
+|---|---|
+| **BriefTool** | 含 GrowthBook + analytics + Anthropic 文件上传云服务；语义是「给用户发消息+附件」，simple-ai 用 chat text 直接显示 |
+| **REPLTool** | 实际上是 AgentTool+BashTool+FileRead/Write/Edit 的别名集合，不是新工具 |
+| **SyntheticOutputTool** | 仅非交互式 session 强制 JSON 输出，simple-ai 全是交互式 |
 
 ## 尚未实现（暂不计划）
 
 | Claude Code 工具 | 原因 |
 |---|---|
-| TeamCreateTool / TeamDeleteTool | 依赖 Anthropic 团队协作云服务 |
-| RemoteTriggerTool | 依赖 Anthropic 远程触发云服务 |
+| **McpAuthTool** | 含 MCP OAuth 流程，依赖外部 OAuth 服务 |
+| **TeamCreateTool** / **TeamDeleteTool** | 依赖 Anthropic agentSwarms 团队协作云服务 |
+| **RemoteTriggerTool** | 含 OAuth + organizationUUID + policyLimits 云服务 |
 
 ## 后续迭代建议
 
-1. **下一版 (v1.0.6+)**: BriefTool / ConfigTool（文档摘要 + 运行时设置）
-2. **MCP 增强**: ListMcpResources / ReadMcpResource / McpAuth（已有 MCP 基础设施）
-3. **暂不复刻**: REPLTool（PTY 持久化复杂）、TeamCreate/Delete、RemoteTrigger 等依赖 Anthropic 闭源云服务的工具
+1. **代码已对齐 Anthropic Claude Code 内置工具能复刻部分**（仅余云服务/OAuth 依赖工具未做）
+2. 若需要 MCP OAuth 支持，需先在 simple-ai 引入 OAuth 流（涉及外部回调和 token 持久化）
 
 ## 关于 code 项目的说明
 

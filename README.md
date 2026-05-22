@@ -1,6 +1,6 @@
 # 简易 AI 工具箱 (SimpleAI Toolbox)
 
-一站式 AI 工具桌面应用。内置 **184 个专业 Agent 角色**、塔罗/八字/紫微等命理解读、**39 个开发者工具**（含图片/视频生成、PowerShell、Sleep、工具搜索）、**75 个 HTML 模板生成器**、**Claude Code 终端**，配置一个 API Key 即可使用全部功能。
+一站式 AI 工具桌面应用。内置 **184 个专业 Agent 角色**、塔罗/八字/紫微等命理解读、**42 个开发者工具**（含图片/视频生成、PowerShell、配置读写、MCP 资源、工具搜索）、**75 个 HTML 模板生成器**、**Claude Code 兼容插件市场**、**Claude Code 终端**，配置一个 API Key 即可使用全部功能。
 
 > 所有数据仅保存在本地，不上传任何服务器。
 
@@ -56,7 +56,7 @@
 
 ### 3. 开发者工具
 
-**39 个内置工具：**
+**42 个内置工具：**
 
 | 类别 | 工具 |
 |------|------|
@@ -70,9 +70,9 @@
 | Todo | `TodoWrite` |
 | 定时/等待 | `Sleep` `CronCreate` `CronList` `CronDelete` `ScheduleWakeup` |
 | LSP | `LspStart` `LspStop` `LspDefinition` `LspReferences` `LspHover` `LspList` |
-| 交互/发现 | `AskUserQuestion` `Skill` `ToolSearch` |
+| 交互/发现 | `AskUserQuestion` `Skill` `ToolSearch` `Config` |
+| MCP | `ListMcpResources` `ReadMcpResource` + 动态注册的 `mcp__*` 工具 |
 | 工作树 | `EnterWorktree` `ExitWorktree` |
-| 扩展 | MCP 服务器动态注册的工具 |
 
 **6 个内置 Skill：**
 - `plan-mode` — 只读研究 → 拟定计划 → 审核执行

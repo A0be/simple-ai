@@ -1,7 +1,7 @@
 {
   "name": "simple-ai",
   "private": true,
-  "version": "1.0.6",
+  "version": "1.0.7",
   "type": "module",
   "main": "electron/main.cjs",
   "description": "一个面向新手的极简 AI 工具，配置 API 地址和 Key 即可使用",

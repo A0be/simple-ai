@@ -12,7 +12,10 @@ import type {
   McpInitializeResult,
   McpToolsListResult,
   McpToolsCallResult,
-  McpTool
+  McpTool,
+  McpResource,
+  McpResourcesListResult,
+  McpResourcesReadResult,
 } from './types'
 
 export class McpClient {
@@ -69,6 +72,24 @@ export class McpClient {
       name,
       arguments: args
     })
+  }
+
+  /** List resources exposed by this server. Servers without resource capability
+   *  reject with -32601 (method not found); we surface that as an empty list. */
+  async listResources(): Promise<McpResource[]> {
+    try {
+      const r = await this.transport.request<McpResourcesListResult>('resources/list', {})
+      return r.resources || []
+    } catch (e) {
+      const msg = (e as Error).message || ''
+      if (/method not found|-32601/i.test(msg)) return []
+      throw e
+    }
+  }
+
+  /** Read a single resource by URI. */
+  async readResource(uri: string): Promise<McpResourcesReadResult> {
+    return await this.transport.request<McpResourcesReadResult>('resources/read', { uri })
   }
 
   async close(): Promise<void> {

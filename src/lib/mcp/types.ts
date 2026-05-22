@@ -63,3 +63,29 @@ export interface McpToolsCallResult {
   content: Array<{ type: string; text?: string; data?: string }>
   isError?: boolean
 }
+
+/** Resource exposed by an MCP server (e.g. file://..., db://table, etc.). */
+export interface McpResource {
+  uri: string
+  name?: string
+  description?: string
+  mimeType?: string
+}
+
+export interface McpResourcesListResult {
+  resources: McpResource[]
+  nextCursor?: string
+}
+
+export interface McpResourceContent {
+  uri: string
+  mimeType?: string
+  /** UTF-8 text contents (set when mime is text-ish) */
+  text?: string
+  /** base64-encoded binary contents (set when mime is binary) */
+  blob?: string
+}
+
+export interface McpResourcesReadResult {
+  contents: McpResourceContent[]
+}
