@@ -4,6 +4,27 @@
 
 ---
 
+## v1.0.9 — 2026-05-22
+
+### 🐛 紧急修复
+- **修复 thinking 模型 400 报错** `reasoning_content in the thinking mode must be passed back to the API`
+  - 根因：原实现把模型返回的 reasoning_content 作为独立 assistant message 插入，content 字段塞 thinking 文本；下一轮请求时违反 DeepSeek-R1 / o1 等模型的协议——它们要求 `reasoning_content` 字段必须在 **同一条 assistant message** 上原样回传
+  - 修复：
+    - `ChatMessage` 类型新增 `reasoning_content?: string` 字段
+    - `ai.ts:toWireMessage` 在 assistant 消息附加 `reasoning_content` 字段
+    - `agentLoop` 不再插入独立 thinking message，直接写入当前 liveAssistant 的 `reasoning_content`
+    - `MessageRender` 新增折叠 UI 渲染 `message.reasoning_content`；保留旧 `display==='thinking'` 路径向后兼容旧对话历史
+
+### 新增
+- **endpoint preset 扩充**：MiniToken 之外加入 OpenRouter / Anthropic 原生（占位待 v1.0.10 适配）/ 字节豆包 / 腾讯混元 / 百度文心；所有 preset 加详细 hint 说明用途
+  - **Anthropic 原生**：暂不支持（待 v1.0.10 加 adapter），建议先通过 MiniToken / OpenRouter 走 OpenAI 兼容协议调用 Claude
+- 所有已有 preset 补充更准确的 hint（标注 thinking 支持 / coder 模型 / 直连情况）
+
+### 已知未做
+- Anthropic 原生 Messages API adapter — 排在 [ROADMAP.md](ROADMAP.md) v1.0.10：协议差异较大（system 顶层 / tool_use/tool_result / x-api-key header / SSE event 不同），需要独立 adapter 层
+
+---
+
 ## v1.0.8 — 2026-05-22
 
 ### 新增

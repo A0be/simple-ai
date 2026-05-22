@@ -82,9 +82,33 @@ export default function MessageRender({
   }
 
   // assistant
-  const showThinkingPlaceholder = streaming && !message.content && !hasToolCalls
+  const showThinkingPlaceholder = streaming && !message.content && !hasToolCalls && !message.reasoning_content
+  const hasReasoning = !!message.reasoning_content
   return (
     <div className="flex flex-col items-start gap-2">
+      {hasReasoning && (
+        <div className="flex flex-col items-start">
+          <button
+            onClick={() => setThinkExpanded(e => !e)}
+            className="flex items-center gap-1.5 text-xs text-ink-400 hover:text-ink-600 py-1 transition-colors"
+          >
+            {streaming && !message.content && (
+              <span className="inline-block w-3 h-3 border-2 border-ink-300 border-t-ink-600 rounded-full animate-spin" />
+            )}
+            <span>
+              {streaming && !message.content
+                ? '思考中…'
+                : `思考完成（${message.reasoning_content!.length} 字）`}
+            </span>
+            <svg className={`w-3 h-3 transition-transform ${thinkExpanded ? 'rotate-180' : ''}`} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 5l3 3 3-3"/></svg>
+          </button>
+          {thinkExpanded && (
+            <div className="max-w-[92%] sm:max-w-[85%] rounded-xl px-3 py-2 bg-ink-50/60 border border-ink-100 text-ink-500 text-xs mt-1 whitespace-pre-wrap max-h-64 overflow-y-auto">
+              {message.reasoning_content}
+            </div>
+          )}
+        </div>
+      )}
       {showThinkingPlaceholder && (
         <ThinkingIndicator
           variant={retryInfo ? 'retry' : 'thinking'}

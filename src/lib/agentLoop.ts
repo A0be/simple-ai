@@ -101,10 +101,11 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
       }
     }))
 
-    // Insert an in-progress assistant message we stream into
+    // Insert an in-progress assistant message we stream into. Thinking content
+    // (reasoning_content from DeepSeek-R1 / o1 / etc.) goes onto this same
+    // message so the next turn's request can echo it back as the
+    // `reasoning_content` field — protocol requires that.
     const liveAssistant: ChatMessage = { role: 'assistant', content: '', display: 'normal' }
-    // Separate thinking message (inserted before the assistant if thinking occurs)
-    let thinkingMsg: ChatMessage | null = null
     messages.push(liveAssistant)
 
     let streamedToolCalls: ToolCall[] = []
@@ -117,13 +118,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
         signal,
         onRetry,
         onThinkingChunk: (delta) => {
-          if (!thinkingMsg) {
-            thinkingMsg = { role: 'assistant', content: '', display: 'thinking' }
-            // Insert thinking message BEFORE the live assistant
-            const idx = messages.indexOf(liveAssistant)
-            messages.splice(idx, 0, thinkingMsg)
-          }
-          thinkingMsg.content += delta
+          liveAssistant.reasoning_content = (liveAssistant.reasoning_content || '') + delta
           onThinkingText?.(delta)
         },
         onChunk: (delta) => {
@@ -136,7 +131,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
       // After streaming, finalize
       liveAssistant.content = res.content
       liveAssistant.tool_calls = res.toolCalls.length ? res.toolCalls : undefined
-      if (thinkingMsg) (thinkingMsg as ChatMessage).content = res.thinking
+      if (res.thinking) liveAssistant.reasoning_content = res.thinking
       streamedToolCalls = res.toolCalls
     } catch (e) {
       // Remove the live placeholder; surface error as a system note

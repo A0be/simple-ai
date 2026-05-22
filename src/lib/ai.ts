@@ -34,6 +34,9 @@ function toWireMessage(m: ChatMessage): Record<string, unknown> {
   }
   if (m.role === 'assistant') {
     if (m.content) base.content = m.content
+    // Some thinking models (DeepSeek-R1 et al.) reject the next turn if the
+    // prior reasoning_content isn't echoed back on the same assistant message.
+    if (m.reasoning_content) base.reasoning_content = m.reasoning_content
     if (m.tool_calls && m.tool_calls.length) {
       base.tool_calls = m.tool_calls.map((tc) => ({
         id: tc.id,

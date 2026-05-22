@@ -60,6 +60,14 @@ export interface ChatMessage {
   role: 'system' | 'user' | 'assistant' | 'tool'
   /** text content; may be empty when assistant only emits tool_calls */
   content: string
+  /**
+   * Chain-of-thought / reasoning content captured from `reasoning_content` /
+   * `thinking` SSE deltas. Some thinking models (DeepSeek-R1 et al.) require
+   * the value to be echoed back in the next turn's assistant message, so it
+   * lives on the same message and is serialized as a top-level field by
+   * toWireMessage.
+   */
+  reasoning_content?: string
   /** file/image attachments (user messages only) */
   attachments?: Attachment[]
   /** when role==='assistant', any tool_calls the model issued */
@@ -70,7 +78,8 @@ export interface ChatMessage {
   name?: string
   /**
    * internal: how this message should be rendered.
-   * 'normal' default; 'thinking' shows greyed thought trace.
+   * 'normal' default; 'thinking' shows greyed thought trace (legacy — new code
+   * uses reasoning_content on a normal assistant message instead).
    * 'plan' shows in plan-mode banner. set by client-side post-processing.
    */
   display?: 'normal' | 'thinking' | 'plan'
