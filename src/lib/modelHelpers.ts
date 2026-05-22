@@ -17,7 +17,7 @@ export const PRESETS: PresetEndpoint[] = [
   { label: 'MiniToken', baseUrl: 'https://minitoken.top/v1', hint: 'minitoken.top 中转 285+ 模型，国内直连，一个 Key 通用 Claude/GPT/Gemini/DeepSeek' },
   { label: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1', hint: 'OpenRouter 聚合 100+ 模型，OpenAI 兼容；支持 Claude / GPT / Llama / Mistral 全部' },
   { label: 'OpenAI 官方', baseUrl: 'https://api.openai.com/v1', hint: '需要全球可访问的网络环境' },
-  { label: 'Anthropic 原生', baseUrl: 'https://api.anthropic.com/v1', hint: '⚠️ 当前 simple-ai 走 OpenAI 兼容协议；调用 Claude 原生 API 暂不支持（v1.0.10+ 适配中），请改用中转站如 MiniToken / OpenRouter' },
+  { label: 'Anthropic 原生', baseUrl: 'https://api.anthropic.com/v1', hint: '✓ v1.0.10 起原生支持：Messages API + tool_use 协议；填入 x-api-key 类型的 Anthropic API Key' },
   { label: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1', hint: '国内直连；支持 deepseek-chat / deepseek-reasoner（含 R1 thinking）' },
   { label: '智谱 GLM', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', hint: '国内直连；GLM-4.5 / GLM-4-Coder / GLM-4-Air' },
   { label: '阿里通义千问', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', hint: 'Qwen 系列：qwen3 / qwen-coder-plus / qwen-vl' },

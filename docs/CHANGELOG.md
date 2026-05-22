@@ -4,6 +4,50 @@
 
 ---
 
+## v1.0.10 — 2026-05-22
+
+### ✨ 多协议适配（Adapter 架构）
+
+**simple-ai 现在可以直接对接 3 种 API 协议**，根据 baseUrl **自动识别**走哪一个：
+
+| 协议 | 触发 URL 规则 | 关键差异 |
+|---|---|---|
+| OpenAI Chat Completions（默认） | 其他 baseUrl | 历史协议，`messages: [...]` + `tool_calls` |
+| **Anthropic Messages** | `api.anthropic.com` 关键字 | `system` 顶层；`tool_use`/`tool_result` content blocks；`x-api-key` header；命名 SSE events |
+| **OpenAI Responses** | URL 路径含 `/responses` | `input`/`instructions` 字段；`response.output_text.delta` 事件；function_call items |
+
+Settings 页 baseUrl 输入框下方自动显示识别结果（紫色 = Anthropic / 绿色 = Responses / 蓝色 = Chat Completions）。
+
+### 架构改造
+- 抽 `src/lib/api/adapter.ts` 定义 `ChatAdapter` 接口
+- `src/lib/api/openai-chat.ts` 把原 ai.ts 逻辑搬入
+- 新增 `src/lib/api/anthropic.ts` 完整 Anthropic Messages 实现（message 转换 / tool_use ↔ tool_result / SSE 事件）
+- 新增 `src/lib/api/openai-responses.ts` OpenAI Responses 实现
+- ai.ts 简化为 dispatcher（detectAdapter + streamChat）
+
+### Anthropic adapter 覆盖
+- system / messages 转换（user/assistant，工具结果折叠到下一条 user message）
+- tools 转换：`function.parameters` ↔ `input_schema`
+- streaming：`message_start` / `content_block_start/delta/stop` / `message_delta` / `message_stop`
+- vision：data URL 自动转 base64 image block
+- 同时携带 `x-api-key` 和 `Authorization: Bearer ...`（适配某些代理）
+
+### Responses adapter 覆盖
+- input/instructions 转换；message + function_call + function_call_output items
+- 流式 `response.output_text.delta` 主路径
+- function_call 工具调用（best-effort）
+- reasoning summary delta 映射到 thinking 通道（实验性）
+
+### 未实现（标注）
+- Anthropic extended thinking blocks / prompt caching / computer use / bash tools
+- Responses reasoning controls / 高级 output_item 类型
+
+### Anthropic preset 状态更新
+- 「Anthropic 原生」preset hint 改为 ✓ 已支持，去掉「暂不支持」警示
+- 用户可直接填入 Anthropic API Key（`sk-ant-...` 类型）
+
+---
+
 ## v1.0.9 — 2026-05-22
 
 ### 🐛 紧急修复

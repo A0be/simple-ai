@@ -10,7 +10,7 @@ import {
   suggestProfileName,
   setProfileProxy,
 } from '@/lib/profiles'
-import { testConnection } from '@/lib/ai'
+import { testConnection, detectAdapter } from '@/lib/ai'
 import { isTauri, tauriInvoke } from '@/lib/tauri'
 import { isElectron } from '@/lib/electron'
 import {
@@ -220,6 +220,16 @@ export default function Settings() {
             autoCapitalize="off"
             autoCorrect="off"
           />
+          {config.baseUrl && (
+            <div className="mt-1 text-[10px] text-ink-500">
+              协议自动识别：
+              <span className={`ml-1 px-1.5 py-0.5 rounded font-medium ${
+                detectAdapter(config.baseUrl).name === 'Anthropic Messages' ? 'bg-violet-100 text-violet-700'
+                : detectAdapter(config.baseUrl).name === 'OpenAI Responses' ? 'bg-emerald-100 text-emerald-700'
+                : 'bg-sky-100 text-sky-700'
+              }`}>{detectAdapter(config.baseUrl).name}</span>
+            </div>
+          )}
           <div className="mt-2 flex flex-wrap gap-1.5">
             {PRESETS.map((p) => (
               <button
