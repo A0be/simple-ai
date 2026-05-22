@@ -328,6 +328,10 @@ MIT — 自由使用、修改、分发。
 
 ## 文档与变更
 
+- 🏛️ **架构文档**：[ARCHITECTURE.md](docs/ARCHITECTURE.md) — 模块划分、数据流、依赖矩阵、扩展点
+- 📊 **功能状态表**：[FEATURE_STATUS.md](docs/FEATURE_STATUS.md) — 每个功能的版本/状态/限制
+- 🗺️ **后期路线图**：[ROADMAP.md](docs/ROADMAP.md) — v1.1+ 计划与技术债
+- 🔧 **工具参考**：[TOOLS.md](docs/TOOLS.md) — 42 个工具的用途、参数、示例
 - 📜 **变更日志**：[CHANGELOG.md](docs/CHANGELOG.md) — 每个版本的完整改动列表
-- 🔧 **工具对照表**：[TOOLS_COMPARISON.md](docs/TOOLS_COMPARISON.md) — simple-ai 与 Anthropic Claude Code 内置工具的差异表
+- 🆚 **工具对照**：[TOOLS_COMPARISON.md](docs/TOOLS_COMPARISON.md) — simple-ai vs Anthropic Claude Code
 - 📸 **截图目录**：[docs/screenshots/](docs/screenshots/)
