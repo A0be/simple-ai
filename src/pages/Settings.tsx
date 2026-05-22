@@ -24,6 +24,7 @@ import {
 import MiniTokenPanel from '@/components/MiniTokenPanel'
 import MarketplaceManager from '@/components/MarketplaceManager'
 import ModelEndpointEditor from '@/components/ModelEndpointEditor'
+import AutoUpdateCard from '@/components/AutoUpdateCard'
 
 export default function Settings() {
   const navigate = useNavigate()
@@ -537,6 +538,8 @@ export default function Settings() {
       </div>
 
       <MarketplaceManager />
+
+      <AutoUpdateCard />
 
       <details className="card p-4 text-sm">
         <summary className="cursor-pointer font-medium text-ink-800">

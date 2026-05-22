@@ -7,6 +7,11 @@ const fg = require('fast-glob')
 let pty = null
 try { pty = require('node-pty') } catch { /* node-pty not available */ }
 
+// electron-updater is optional at dev time (needs a real installed app with code-sign metadata).
+// We swallow the import error so `npm run electron:dev` still boots if updater deps are unhappy.
+let autoUpdater = null
+try { autoUpdater = require('electron-updater').autoUpdater } catch { /* updater disabled */ }
+
 const isDev = !!process.env.VITE_DEV_SERVER_URL
 
 // Single instance lock — prevent duplicate windows
@@ -60,6 +65,7 @@ function createWindow() {
 app.whenReady().then(() => {
   createWindow()
   setupClaudeOnce()
+  setupAutoUpdater()
 })
 app.on('window-all-closed', () => app.quit())
 app.on('activate', () => {
@@ -261,6 +267,101 @@ ipcMain.handle('proxy:get', () => ({
   url: currentProxyUrl,
   hasAuth: !!currentProxyAuth,
 }))
+
+// --- Auto-updater (electron-updater + GitHub releases) ---
+// State surface to the renderer is intentionally small: a UpdaterState string and
+// optional version/progress numbers. The renderer polls or subscribes via IPC.
+let updaterState = 'idle' // 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error'
+let updaterVersion = null
+let updaterProgress = 0
+let updaterError = null
+
+function broadcastUpdaterState() {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('updater:state', {
+      state: updaterState,
+      version: updaterVersion,
+      progress: updaterProgress,
+      error: updaterError,
+    })
+  }
+}
+
+function setupAutoUpdater() {
+  // electron-updater requires the app to be packaged. In dev (Vite server),
+  // skip silently so devs don't see noisy errors.
+  if (!autoUpdater || isDev) return
+  // Use the publish entry from package.json (GitHub provider).
+  autoUpdater.autoDownload = false // wait for user confirmation
+  autoUpdater.allowDowngrade = false
+
+  autoUpdater.on('checking-for-update', () => {
+    updaterState = 'checking'; updaterError = null
+    broadcastUpdaterState()
+  })
+  autoUpdater.on('update-available', (info) => {
+    updaterState = 'available'; updaterVersion = info?.version || null
+    broadcastUpdaterState()
+  })
+  autoUpdater.on('update-not-available', () => {
+    updaterState = 'not-available'
+    broadcastUpdaterState()
+  })
+  autoUpdater.on('download-progress', (p) => {
+    updaterState = 'downloading'; updaterProgress = Math.round(p?.percent || 0)
+    broadcastUpdaterState()
+  })
+  autoUpdater.on('update-downloaded', (info) => {
+    updaterState = 'downloaded'; updaterVersion = info?.version || updaterVersion
+    broadcastUpdaterState()
+  })
+  autoUpdater.on('error', (e) => {
+    updaterState = 'error'; updaterError = e?.message || String(e)
+    broadcastUpdaterState()
+  })
+
+  // Kick off the first check ~5s after launch so it doesn't compete with cold-start I/O.
+  setTimeout(() => {
+    try { autoUpdater.checkForUpdates() } catch (e) { /* ignore */ }
+  }, 5000)
+}
+
+ipcMain.handle('updater:status', () => ({
+  state: updaterState,
+  version: updaterVersion,
+  progress: updaterProgress,
+  error: updaterError,
+  available: !!autoUpdater && !isDev,
+}))
+
+ipcMain.handle('updater:check', async () => {
+  if (!autoUpdater || isDev) {
+    return { ok: false, message: '自动更新仅在打包后的安装版可用（开发模式跳过）' }
+  }
+  try {
+    const r = await autoUpdater.checkForUpdates()
+    return { ok: true, version: r?.updateInfo?.version || null }
+  } catch (e) {
+    return { ok: false, message: e.message }
+  }
+})
+
+ipcMain.handle('updater:download', async () => {
+  if (!autoUpdater || isDev) return { ok: false, message: '不可用（开发模式）' }
+  try {
+    await autoUpdater.downloadUpdate()
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, message: e.message }
+  }
+})
+
+ipcMain.handle('updater:install', () => {
+  if (!autoUpdater || isDev) return { ok: false }
+  // quitAndInstall: closes the app and runs the NSIS installer
+  setImmediate(() => autoUpdater.quitAndInstall(false, true))
+  return { ok: true }
+})
 
 // --- IPC: Marketplace fetch (Claude Code plugin marketplace) ---
 // Uses Electron `net.request` so requests go through the default session,

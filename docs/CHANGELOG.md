@@ -4,6 +4,37 @@
 
 ---
 
+## v1.0.8 — 2026-05-22
+
+### 新增
+- **🔄 自动更新（electron-updater）**：从 GitHub Releases 检查并安装新版本
+  - 启动后约 5s 自动检查（仅打包后的安装版生效）
+  - Settings 新增「自动更新」卡：状态 / 版本 / 进度 / 下载 / 安装按钮
+  - 用户确认后下载，下载完弹「重启并安装」按钮
+  - electron-builder `publish: github` 配置生成 `latest.yml`
+  - 新增 IPC: `updater:status / check / download / install` + 推送通道 `updater:state`
+
+### 文档
+- 新增 [docs/DEV_SETUP.md](DEV_SETUP.md)：本地开发环境从零到跑起来 + 11 项报错对照
+- 新增 [docs/CONTRIBUTING.md](CONTRIBUTING.md)：常见任务 cheat sheet（加工具/页面/IPC/Skill + 发布流程）
+- 重写 [CLAUDE.md](../CLAUDE.md)：v1.0.1 → v1.0.7 全貌；新会话快速索引；v1.0.8 草案标注
+- 重写 [docs/ARCHITECTURE.md](ARCHITECTURE.md)：v1.0.7 分层图 + 28 模块职责矩阵
+- 重写 [docs/TOOLS.md](TOOLS.md)：42 个工具完整参数与示例
+- 新增 [docs/FEATURE_STATUS.md](FEATURE_STATUS.md)：功能状态表（版本/限制/TODO）
+- 新增 [docs/ROADMAP.md](ROADMAP.md)：v1.1 / v1.2 / Future 三档
+
+### 代码模块化
+- 抽 [src/lib/modelHelpers.ts](../src/lib/modelHelpers.ts)：PRESETS / FALLBACK_MODELS / fetchModels
+- 抽 [src/components/ModelEndpointEditor.tsx](../src/components/ModelEndpointEditor.tsx) 独立组件
+- 抽 [src/components/MessageRender.tsx](../src/components/MessageRender.tsx) 独立组件
+- [Settings.tsx](../src/pages/Settings.tsx)：755 → 575 LOC (-180)
+- [ChatView.tsx](../src/components/ChatView.tsx)：733 → 624 LOC (-109)
+
+### 配置
+- [package.json](../package.json) 增 `electron-builder.publish` GitHub provider 配置；electron-updater 6.x 入 deps
+
+---
+
 ## v1.0.7 — 2026-05-22
 
 ### 新增工具（3 个，对齐 Claude Code 剩余可复刻清单）

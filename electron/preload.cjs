@@ -13,6 +13,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   proxySet: (args) => ipcRenderer.invoke('proxy:set', args),
   proxyGet: () => ipcRenderer.invoke('proxy:get'),
   marketplaceFetch: (args) => ipcRenderer.invoke('marketplace:fetch_text', args),
+  // Auto-updater
+  updaterStatus: () => ipcRenderer.invoke('updater:status'),
+  updaterCheck: () => ipcRenderer.invoke('updater:check'),
+  updaterDownload: () => ipcRenderer.invoke('updater:download'),
+  updaterInstall: () => ipcRenderer.invoke('updater:install'),
+  onUpdaterState: (cb) => {
+    const handler = (_, data) => cb(data)
+    ipcRenderer.on('updater:state', handler)
+    return () => ipcRenderer.removeListener('updater:state', handler)
+  },
   // MiniToken
   minitokenOpen: (opts) => ipcRenderer.invoke('minitoken_open', opts || {}),
   minitokenExtractSession: () => ipcRenderer.invoke('minitoken_extract_session'),
