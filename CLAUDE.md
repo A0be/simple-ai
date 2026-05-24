@@ -1,7 +1,7 @@
 # SimpleAI Toolbox — 项目交接文档
 
 > 本文件供 Claude Code / AI 助手在**新会话**中快速理解项目全貌。
-> 最后更新：**v1.0.7**（2026-05-22）
+> 最后更新：**v1.0.11**（2026-05-24）
 > 同步阅读：[CHANGELOG.md](docs/CHANGELOG.md) / [ARCHITECTURE.md](docs/ARCHITECTURE.md) / [FEATURE_STATUS.md](docs/FEATURE_STATUS.md)
 
 ---
@@ -24,10 +24,10 @@
 
 ## 1. 项目一句话
 
-**简易 AI 工具箱**（SimpleAI Toolbox）— 一站式 AI 工具桌面应用（Electron 优先），兼容所有 OpenAI Chat Completions API。一个 API Key 通用 184 个 Agent 角色 / 42 个开发者工具 / 75 个 HTML 模板 / 命理 / Claude Code 终端 / MCP / 插件市场。
+**简易 AI 工具箱**（SimpleAI Toolbox）— 一站式 AI 工具桌面应用（Electron 优先），兼容 OpenAI / Anthropic / OpenAI Responses 三种 API 协议（自动识别）。184 个 Agent 角色 / 42 个开发者工具 / 75 个 HTML 模板 / 命理 / Claude Code 终端 / MCP / 插件市场。
 
 - **GitHub**：https://github.com/A0be/simple-ai
-- **当前版本**：1.0.7（持续迭代）
+- **当前版本**：1.0.11（持续迭代）
 - **平台主目标**：Windows 10/11 x64（Electron NSIS）；备选 Tauri / Web+Companion / PWA
 - **存储**：localStorage（配置/对话/收藏/MCP/profiles/历史/marketplace 等）
 - **不上传任何服务器**：仅与用户配置的 API 端点通信
@@ -43,7 +43,7 @@
 | 桌面 | Electron 42（main.cjs + preload.cjs + contextBridge） |
 | 终端 | xterm.js 6 + node-pty 1.x |
 | 打包 | electron-builder（NSIS，输出到 `out/`） |
-| API 协议 | OpenAI Chat Completions SSE + MCP JSON-RPC 2.0 |
+| API 协议 | OpenAI Chat Completions / Anthropic Messages / OpenAI Responses（自动识别 `src/lib/api/`）+ MCP JSON-RPC 2.0 |
 | 第三方 UI 组件依赖 | **零**（Markdown / 图标 / 模态都项目内实现） |
 
 ---
@@ -80,7 +80,13 @@ simple-ai/
 │   │   ├── HtmlAnything / ClaudeTerminal / History / Mcp / Skills / Tools
 │   │
 │   └── lib/                    # 28 个核心模块
-│       ├── ai.ts               # SSE 流式 + 走 retry
+│       ├── ai.ts               # SSE 流式 dispatcher（detectAdapter + streamChat）
+│       ├── api/                # 多协议 Adapter 架构（v1.0.10+）
+│       │   ├── adapter.ts      #   ChatAdapter 接口定义
+│       │   ├── openai-chat.ts  #   OpenAI Chat Completions 默认协议
+│       │   ├── anthropic.ts    #   Anthropic Messages 协议
+│       │   ├── openai-responses.ts # OpenAI Responses 协议
+│       │   └── stripInlineMedia.ts # 出向裁剪 base64（v1.0.11）
 │       ├── retry.ts            # withRetry: 5 次 / 60s / 4xx 立停（v1.0.4）
 │       ├── agentLoop.ts        # 多轮工具调度（只读并行 / 写入顺序）
 │       ├── agents.ts           # 184 角色
@@ -182,6 +188,7 @@ interface ChatMessage {
   content: string
   tool_calls?: ToolCall[]        // assistant 发出
   tool_call_id?: string          // tool 响应
+  reasoning_content?: string     // thinking model 回传字段（v1.0.9）
   display?: 'normal' | 'thinking' | 'plan'
   attachments?: Attachment[]     // user 消息附件
 }
@@ -249,6 +256,9 @@ npx tsc --noEmit         # 类型检查（提交前必跑）
 | **`html_export`** | HTML 万物生成另存对话框 + 打开 | v1.0.2 |
 | **`proxy:set / get`** | SOCKS5 代理切换 | v1.0.2 |
 | **`marketplace:fetch_text`** | 走 session.defaultSession（含代理）的 HTTP GET | v1.0.6 |
+| **`updater:status / check / download / install`** | 自动更新（electron-updater） | v1.0.8 |
+| **`updater:state`** (main→renderer) | 更新状态推送 | v1.0.8 |
+| **`media:save`** | 保存图片/视频到 userData/media/ | v1.0.11 |
 
 ---
 
@@ -263,8 +273,11 @@ npx tsc --noEmit         # 类型检查（提交前必跑）
 | v1.0.4 | 2026-05-22 | 思考状态 SVG 动效（4 variant）；通用 withRetry（5 次/60s/4xx 立停）；多模态超时延长；大图 ⚠️ 预警；TOOLS_COMPARISON / CHANGELOG 入档 |
 | v1.0.5 | 2026-05-22 | +PowerShell / Sleep / ToolSearch 三工具（36→39）；README 嵌截图 |
 | v1.0.6 | 2026-05-22 | **🧩 Claude Code 兼容插件市场**；默认生图改 `gpt-image-2-all` |
-| v1.0.7 | 2026-05-22 | +Config / ListMcpResources / ReadMcpResource（39→42）；MCP client 加 resources/list+read；明确不复刻 7 个云依赖工具 |
-| _v1.0.8 草案_ | _未发布_ | 已 commit：ARCHITECTURE/TOOLS 文档完整化；新增 FEATURE_STATUS / ROADMAP；Settings/ChatView 模块化抽取（-180/-109 LOC） |
+| v1.0.7 | 2026-05-22 | +Config / ListMcpResources / ReadMcpResource（39→42）；明确不复刻 7 个云依赖工具 |
+| v1.0.8 | 2026-05-22 | electron-updater 自动更新；文档完整化；Settings/ChatView 模块化抽取 |
+| v1.0.9 | 2026-05-22 | hotfix: reasoning_content 协议修复；扩充 endpoint preset（11 个） |
+| v1.0.10 | 2026-05-22 | **Adapter 架构**：Anthropic Messages / OpenAI Responses / OpenAI Chat 三协议自动识别 |
+| v1.0.11 | 2026-05-24 | 视频轮询 + 多模态模型优先级修复 + 媒体本地持久化（app-media://）+ UI 布局重构 |
 
 ---
 
@@ -296,12 +309,9 @@ npx tsc --noEmit         # 类型检查（提交前必跑）
 
 ---
 
-## 12. 现在的「未发布」状态
+## 12. 当前发布状态
 
-仓库当前 HEAD `b54b950` 含 v1.0.8 草案改动：
-- 文档完善（ARCHITECTURE / TOOLS / FEATURE_STATUS / ROADMAP 全部就位）
-- Settings.tsx (-180 LOC) / ChatView.tsx (-109 LOC) 抽出 3 个新文件
-- **未升版本号 / 未打包**：等用户决定下一批一起发
+最新 Release：[v1.0.11](https://github.com/A0be/simple-ai/releases/tag/v1.0.11)（2026-05-24）
 
 如果你打算继续开发：
 1. 看 [FEATURE_STATUS.md](docs/FEATURE_STATUS.md) 找当前能用什么 / 有什么限制

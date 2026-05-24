@@ -4,6 +4,37 @@
 
 ---
 
+## v1.0.11 — 2026-05-24
+
+### 🎬 视频生成修复
+- 视频端点修正为 `/v1/video/create`
+- **新增轮询机制**：POST 创建后每 5 秒查询 `/v1/video/query` 直到拿到 URL 或 10 分钟超时
+
+### 🎨 多模态修复
+- **模型选择优先级**：用户设置 > AI 参数 > 默认值（之前 AI 自带 model 会覆盖用户设置）
+- 图片 / 音频 / 视频超时统一 **10 分钟**
+- 下一轮 API 请求不再回传 MB 级 base64（`stripInlineMedia` 出向裁剪）
+
+### 💾 媒体本地持久化
+- 注册 `app-media://` Electron 自定义协议，映射 `userData/media/`
+- 图片/视频生成后自动保存到本地
+- 历史对话恢复时图片和视频永久可查看，不再依赖临时 URL
+- localStorage 不再存 MB 级 base64
+
+### 🖥 UI 布局重构
+- 修复高度链断裂：Layout main 加 `flex flex-col`；聊天页面用 `flex-1 min-h-0`
+- 输入框独立控制面板（`border-t` + `shadow-md`）
+- 顶栏模式切换按钮（📋 计划 / 🔧 执行）
+- streaming 期间 200ms interval 保底滚底
+- ChatView 顶栏加 `shrink-0`
+
+### 新增文件
+- `src/lib/api/stripInlineMedia.ts` — 出向 base64 裁剪
+- Electron IPC `media:save` + preload `mediaSave`
+- `src/lib/electron.ts` + `electronMediaSave()`
+
+---
+
 ## v1.0.10 — 2026-05-22
 
 ### ✨ 多协议适配（Adapter 架构）
