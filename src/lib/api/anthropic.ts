@@ -22,6 +22,7 @@
 import type { ChatMessage, ToolCall } from '@/types'
 import { withRetry } from '../retry'
 import { ApiError, type ChatAdapter, type AdapterStreamOptions, type StreamResult } from './adapter'
+import { stripInlineMedia } from './stripInlineMedia'
 
 const ANTHROPIC_VERSION = '2023-06-01'
 const DEFAULT_MAX_TOKENS = 4096
@@ -78,7 +79,9 @@ function buildAnthropicRequest(messages: ChatMessage[]): {
       pendingToolResults.push({
         type: 'tool_result',
         tool_use_id: m.tool_call_id || '',
-        content: m.content,
+        // Strip inline base64 dataURLs — Anthropic's tool_result.content is
+        // text-only and would reject (or 413 on) multi-MB image data.
+        content: stripInlineMedia(m.content),
       })
       continue
     }

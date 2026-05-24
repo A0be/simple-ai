@@ -1,6 +1,7 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, session, net } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog, shell, session, net, protocol } = require('electron')
 const path = require('path')
 const fs = require('fs')
+const url = require('url')
 const { exec, execSync } = require('child_process')
 const fg = require('fast-glob')
 
@@ -62,7 +63,18 @@ function createWindow() {
   }
 }
 
+// Register app-media:// protocol for serving locally saved media files
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'app-media', privileges: { standard: true, secure: true, supportFetchAPI: true } }
+])
+
 app.whenReady().then(() => {
+  // Handle app-media:// URLs → userData/media/<filename>
+  protocol.handle('app-media', (req) => {
+    const fileName = decodeURIComponent(new URL(req.url).pathname).replace(/^\/+/, '')
+    const filePath = path.join(app.getPath('userData'), 'media', fileName)
+    return net.fetch(url.pathToFileURL(filePath).href)
+  })
   createWindow()
   setupClaudeOnce()
   setupAutoUpdater()
@@ -395,6 +407,24 @@ ipcMain.handle('marketplace:fetch_text', async (_, { url, accept }) => {
       resolve({ ok: false, error: e.message })
     }
   })
+})
+
+// --- IPC: Media Save (persist generated images/videos to userData/media/) ---
+ipcMain.handle('media:save', async (_, { base64, downloadUrl, ext }) => {
+  const dir = path.join(app.getPath('userData'), 'media')
+  await fs.promises.mkdir(dir, { recursive: true })
+  const name = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext || 'bin'}`
+  const dest = path.join(dir, name)
+  if (base64) {
+    await fs.promises.writeFile(dest, Buffer.from(base64, 'base64'))
+  } else if (downloadUrl) {
+    const resp = await net.fetch(downloadUrl, { session: session.defaultSession })
+    const buf = Buffer.from(await resp.arrayBuffer())
+    await fs.promises.writeFile(dest, buf)
+  } else {
+    throw new Error('media:save requires base64 or downloadUrl')
+  }
+  return { fileName: name, src: `app-media:///${name}` }
 })
 
 // --- IPC: MiniToken Integration ---

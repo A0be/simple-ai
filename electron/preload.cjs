@@ -13,6 +13,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   proxySet: (args) => ipcRenderer.invoke('proxy:set', args),
   proxyGet: () => ipcRenderer.invoke('proxy:get'),
   marketplaceFetch: (args) => ipcRenderer.invoke('marketplace:fetch_text', args),
+  // Media persistence
+  mediaSave: (args) => ipcRenderer.invoke('media:save', args),
   // Auto-updater
   updaterStatus: () => ipcRenderer.invoke('updater:status'),
   updaterCheck: () => ipcRenderer.invoke('updater:check'),

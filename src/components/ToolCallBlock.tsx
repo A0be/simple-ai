@@ -85,13 +85,13 @@ function extractMediaFromResult(name: string, resultText?: string): { images?: s
   if (!resultText) return null
   if (name === 'ImageGenerate') {
     const urls: string[] = []
-    const re = /\[Image \d+\]: (https?:\/\/\S+|data:image\/\S+)/g
+    const re = /\[Image \d+\]: (https?:\/\/\S+|data:image\/\S+|app-media:\/\/\/\S+)/g
     let m
     while ((m = re.exec(resultText)) !== null) urls.push(m[1])
     if (urls.length) return { images: urls }
   }
   if (name === 'VideoGenerate') {
-    const m = resultText.match(/Video URL: (https?:\/\/\S+)/)
+    const m = resultText.match(/Video URL: (https?:\/\/\S+|app-media:\/\/\/\S+)/)
     if (m) return { videoUrl: m[1] }
   }
   return null

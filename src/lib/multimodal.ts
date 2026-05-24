@@ -11,9 +11,9 @@ const MINITOKEN_BASE = 'https://minitoken.top/v1'
 // Per-capability timeouts: image gen often takes 30-60s, video generation
 // is async-but-some-providers-block for 5+ min, TTS is fast, transcription is
 // proportional to clip length.
-const TIMEOUT_IMAGE_MS = 120_000
+const TIMEOUT_IMAGE_MS = 600_000
 const TIMEOUT_VIDEO_MS = 600_000
-const TIMEOUT_AUDIO_MS = 90_000
+const TIMEOUT_AUDIO_MS = 600_000
 const TIMEOUT_EMBED_MS = 60_000
 
 const MULTIMODAL_MAX_ATTEMPTS = 2 // multimodal calls are expensive — fewer retries
@@ -91,7 +91,7 @@ export async function generateImage(opts: ImageGenOptions): Promise<ImageGenResu
   const url = `${base}/v1/images/generations`
 
   const body: Record<string, unknown> = {
-    model: opts.model || ep.model || 'gpt-image-2-all',
+    model: ep.model || opts.model || 'gpt-image-2-all',
     prompt: opts.prompt,
     n: opts.n || 1,
     size: opts.size || '1024x1024',
@@ -144,7 +144,7 @@ export async function generateSpeech(opts: TTSOptions): Promise<Blob> {
   const url = `${base}/v1/audio/speech`
 
   const body = {
-    model: opts.model || ep.model || 'tts-1',
+    model: ep.model || opts.model || 'tts-1',
     input: opts.input,
     voice: opts.voice || 'alloy',
     speed: opts.speed || 1.0,
@@ -244,7 +244,7 @@ export async function generateVideo(opts: VideoGenOptions): Promise<VideoGenResu
   const base = normalizeBase(ep.baseUrl)
 
   const body: Record<string, unknown> = {
-    model: opts.model || ep.model || 'veo-2',
+    model: ep.model || opts.model || 'veo-2',
     prompt: opts.prompt,
   }
   if (opts.duration) body.duration = opts.duration
@@ -252,7 +252,7 @@ export async function generateVideo(opts: VideoGenOptions): Promise<VideoGenResu
 
   const resp = await withRetry(
     async (attemptSignal) => {
-      const r = await fetch(`${base}/v1/videos/text`, {
+      const r = await fetch(`${base}/v1/video/create`, {
         method: 'POST',
         signal: attemptSignal,
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${ep.apiKey}` },
@@ -270,11 +270,45 @@ export async function generateVideo(opts: VideoGenOptions): Promise<VideoGenResu
   )
 
   const json = await resp.json()
+  const immediateUrl = extractVideoUrl(json)
+  const taskId = json.id || json.task_id || json.taskId || ''
+
+  // If the API returned a URL right away, we're done.
+  if (immediateUrl) {
+    return { id: taskId, status: 'completed', url: immediateUrl }
+  }
+
+  // Otherwise the task is async — poll until completed or timeout.
+  if (taskId) {
+    const pollUrl = `${base}/v1/video/query`
+    const pollStart = Date.now()
+    const POLL_INTERVAL = 5_000
+    while (Date.now() - pollStart < TIMEOUT_VIDEO_MS) {
+      await new Promise(r => setTimeout(r, POLL_INTERVAL))
+      try {
+        const pr = await fetch(pollUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${ep.apiKey}` },
+          body: JSON.stringify({ id: taskId, task_id: taskId }),
+          signal: AbortSignal.timeout(15_000),
+        })
+        if (!pr.ok) continue
+        const pj = await pr.json()
+        const status = (pj.status || '').toLowerCase()
+        const videoUrl = extractVideoUrl(pj)
+        if (videoUrl) return { id: taskId, status: 'completed', url: videoUrl }
+        if (status === 'failed' || status === 'error') {
+          return { id: taskId, status: 'failed', error: pj.error || pj.message || 'Video generation failed' }
+        }
+      } catch { /* retry next interval */ }
+    }
+  }
+
   return {
-    id: json.id || json.task_id || json.taskId || '',
+    id: taskId,
     status: json.status || 'pending',
-    url: extractVideoUrl(json),
-    error: json.error,
+    url: undefined,
+    error: taskId ? '轮询超时，任务可能仍在处理中' : undefined,
   }
 }
 

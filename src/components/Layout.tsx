@@ -31,7 +31,7 @@ export default function Layout() {
     <div className="h-screen flex flex-col overflow-hidden">
       <Header />
       {!configured && location.pathname !== '/settings' && <ConfigBanner />}
-      <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 pb-16 pt-2 overflow-y-auto">
+      <main className="flex-1 flex flex-col w-full max-w-5xl mx-auto px-4 sm:px-6 pb-16 pt-2 overflow-y-auto">
         <Outlet />
       </main>
       <BottomNav items={NAV_ITEMS} />

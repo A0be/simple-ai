@@ -15,8 +15,8 @@ export default function AgentChat() {
   const prompt = getAgentPrompt(agent)
 
   return (
-    <div className="pt-4">
-      <div className="mb-3">
+    <div className="flex-1 min-h-0 flex flex-col pt-4">
+      <div className="mb-3 shrink-0">
         <button onClick={() => navigate(-1)} className="btn-ghost text-sm mb-2">← 返回</button>
         <div className="flex items-center gap-2">
           <span className="text-xl">{agent.emoji}</span>
@@ -29,7 +29,8 @@ export default function AgentChat() {
         </div>
       </div>
 
-      <ChatView
+      <div className="flex-1 min-h-0">
+        <ChatView
         featureId={`agent-${agent.id}`}
         featureTitle={agent.name}
         systemPrompt={prompt}
@@ -46,6 +47,7 @@ export default function AgentChat() {
           </div>
         }
       />
+      </div>
     </div>
   )
 }

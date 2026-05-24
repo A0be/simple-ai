@@ -146,6 +146,15 @@ export default function ChatView({
     scrollToBottom()
   }, [messages, streaming])
 
+  // While streaming, keep scrolling to bottom at a steady interval so
+  // late-loading images / tool blocks that resize the container don't leave
+  // the user stuck mid-page.
+  useEffect(() => {
+    if (!streaming) return
+    const id = setInterval(scrollToBottom, 200)
+    return () => clearInterval(id)
+  }, [streaming])
+
   useEffect(() => {
     const ta = textareaRef.current
     if (!ta) return
@@ -424,7 +433,7 @@ export default function ChatView({
   return (
     <div className="flex flex-col h-full min-h-0">
       <AskUserQuestionModal request={askRequest} />
-      <div className="flex items-center justify-between mb-3 gap-2">
+      <div className="flex items-center justify-between mb-3 gap-2 shrink-0">
         <div className="text-xs text-ink-500 flex items-center gap-2 min-w-0">
           <span>{messages.length} 条消息</span>
           {desktop && (
@@ -443,9 +452,21 @@ export default function ChatView({
             </span>
           )}
         </div>
-        <button onClick={reset} className="btn-ghost text-sm py-1.5 px-3 shrink-0">
-          新对话
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => setPlanMode(!planMode)}
+            className={`text-xs px-2.5 py-1 rounded-md ${
+              planMode
+                ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+            }`}
+          >
+            {planMode ? '📋 计划模式' : '🔧 执行模式'}
+          </button>
+          <button onClick={reset} className="btn-ghost text-sm py-1.5 px-3">
+            新对话
+          </button>
+        </div>
       </div>
 
       <PlanBanner active={planMode} draft={planDraft} onToggle={() => setPlanMode(!planMode)} />
@@ -498,7 +519,7 @@ export default function ChatView({
         )}
       </div>
 
-      <div className="mt-auto pt-2 shrink-0 relative">
+      <div className="mt-auto pt-3 shrink-0 relative border-t border-ink-200">
         {showSlashMenu && filteredSlash.length > 0 && (
           <div className="absolute bottom-full left-0 right-0 mb-2 card p-1.5 max-h-72 overflow-y-auto shadow-lg z-10">
             {filteredSlash.map((cmd) => (
@@ -520,7 +541,7 @@ export default function ChatView({
             ))}
           </div>
         )}
-        <div className="card p-2">
+        <div className="card p-2 shadow-md ring-1 ring-ink-100">
           {/* Attachment previews */}
           {attachments.length > 0 && (
             <div className="flex flex-wrap gap-2 px-2 pb-2 border-b border-ink-100 mb-2">

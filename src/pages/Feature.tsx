@@ -83,8 +83,8 @@ export default function Feature() {
   const intro = INTERACTIVE_INTROS[feature.id] ?? STATIC_INTROS[feature.id]
 
   return (
-    <div className="pt-4">
-      <div className="mb-3">
+    <div className="flex-1 min-h-0 flex flex-col pt-4">
+      <div className="mb-3 shrink-0">
         <button onClick={() => navigate(-1)} className="btn-ghost text-sm mb-2">← 返回</button>
         <div className="flex items-center gap-2">
           <span className="text-xl">{feature.emoji}</span>
@@ -93,7 +93,8 @@ export default function Feature() {
         <div className="text-xs text-ink-500 mt-0.5">{feature.description}</div>
       </div>
 
-      <ChatView
+      <div className="flex-1 min-h-0">
+        <ChatView
         featureId={feature.id}
         featureTitle={feature.title}
         systemPrompt={prompt}
@@ -102,6 +103,7 @@ export default function Feature() {
         conversationId={conversationId}
         initialMessage={initialMessage}
       />
+      </div>
     </div>
   )
 }

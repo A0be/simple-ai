@@ -8,6 +8,7 @@
 import type { ChatMessage, ToolCall, Attachment } from '@/types'
 import { withRetry } from '../retry'
 import { ApiError, type ChatAdapter, type AdapterStreamOptions, type StreamResult } from './adapter'
+import { stripInlineMedia } from './stripInlineMedia'
 
 function normalizeBaseUrl(baseUrl: string): string {
   const trimmed = baseUrl.trim().replace(/\/+$/, '')
@@ -35,7 +36,9 @@ function toWireMessage(m: ChatMessage): Record<string, unknown> {
   const base: Record<string, unknown> = { role: m.role }
   if (m.role === 'tool') {
     base.tool_call_id = m.tool_call_id
-    base.content = m.content
+    // Strip inline base64 dataURLs (from ImageGenerate / VideoGenerate) so we
+    // don't echo multi-MB image bytes back on every subsequent turn.
+    base.content = stripInlineMedia(m.content)
     if (m.name) base.name = m.name
     return base
   }

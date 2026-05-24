@@ -1,6 +1,7 @@
 import type { ToolDef, ToolResult } from '../types'
 import { parseToolArgs } from '../types'
 import { generateImage, type ImageGenResult } from '@/lib/multimodal'
+import { isElectron, electronMediaSave } from '@/lib/electron'
 
 interface Input {
   prompt: string
@@ -46,25 +47,32 @@ export const ImageGenerateTool: ToolDef = {
 
       if (!results.length) return { content: 'No images generated.', isError: true }
 
-      const urls = results.map((r, i) => {
-        const src = r.url || (r.b64_json ? `data:image/png;base64,${r.b64_json}` : '')
+      const useLocal = isElectron()
+      const urls: string[] = []
+
+      for (let i = 0; i < results.length; i++) {
+        const r = results[i]
+        let src = r.url || (r.b64_json ? `data:image/png;base64,${r.b64_json}` : '')
+
+        // In Electron: persist to local disk via IPC so history survives
+        if (useLocal && src) {
+          try {
+            if (r.b64_json) {
+              const { src: localSrc } = await electronMediaSave({ base64: r.b64_json, ext: 'png' })
+              src = localSrc
+            } else if (r.url?.startsWith('http')) {
+              const { src: localSrc } = await electronMediaSave({ downloadUrl: r.url, ext: 'png' })
+              src = localSrc
+            }
+          } catch { /* fall back to original src */ }
+        }
+
         const revised = r.revised_prompt ? `\nRevised prompt: ${r.revised_prompt}` : ''
-        return `[Image ${i + 1}]: ${src}${revised}`
-      })
+        urls.push(`[Image ${i + 1}]: ${src}${revised}`)
+      }
 
       return {
         content: `Generated ${results.length} image(s):\n\n${urls.join('\n\n')}`,
-        ui: {
-          kind: 'generic',
-          data: {
-            type: 'images',
-            images: results.map(r => ({
-              url: r.url || (r.b64_json ? `data:image/png;base64,${r.b64_json}` : ''),
-              revisedPrompt: r.revised_prompt,
-            })),
-            prompt: input.prompt,
-          },
-        },
       }
     } catch (e) {
       return { content: `Image generation failed: ${(e as Error).message}`, isError: true }

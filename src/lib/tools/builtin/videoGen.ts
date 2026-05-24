@@ -1,6 +1,7 @@
 import type { ToolDef, ToolResult } from '../types'
 import { parseToolArgs } from '../types'
 import { generateVideo } from '@/lib/multimodal'
+import { isElectron, electronMediaSave } from '@/lib/electron'
 
 interface Input {
   prompt: string
@@ -42,25 +43,26 @@ export const VideoGenerateTool: ToolDef = {
         size: input.size,
       })
 
+      let videoSrc = result.url
+
+      // In Electron: download and persist video to local disk
+      if (videoSrc?.startsWith('http') && isElectron()) {
+        try {
+          const ext = videoSrc.match(/\.(mp4|webm|mov)/i)?.[1] || 'mp4'
+          const { src: localSrc } = await electronMediaSave({ downloadUrl: videoSrc, ext })
+          videoSrc = localSrc
+        } catch { /* fall back to remote url */ }
+      }
+
       const lines = [
         `Video task created (ID: ${result.id || 'n/a'})`,
         `Status: ${result.status}`,
       ]
-      if (result.url) lines.push(`Video URL: ${result.url}`)
+      if (videoSrc) lines.push(`Video URL: ${videoSrc}`)
       if (result.error) lines.push(`Error: ${result.error}`)
 
       return {
         content: lines.join('\n'),
-        ui: {
-          kind: 'generic',
-          data: {
-            type: 'video',
-            id: result.id,
-            status: result.status,
-            url: result.url,
-            prompt: input.prompt,
-          },
-        },
       }
     } catch (e) {
       return { content: `Video generation failed: ${(e as Error).message}`, isError: true }

@@ -69,3 +69,7 @@ export async function electronSetWorkspace(path: string): Promise<string | null>
 export async function electronGetWorkspace(): Promise<string | null> {
   return api().getWorkspace()
 }
+
+export async function electronMediaSave(opts: { base64?: string; downloadUrl?: string; ext: string }): Promise<{ fileName: string; src: string }> {
+  return api().mediaSave(opts)
+}

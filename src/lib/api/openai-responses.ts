@@ -22,6 +22,7 @@
 import type { ChatMessage, ToolCall } from '@/types'
 import { withRetry } from '../retry'
 import { ApiError, type ChatAdapter, type AdapterStreamOptions, type StreamResult } from './adapter'
+import { stripInlineMedia } from './stripInlineMedia'
 
 function buildEndpoint(baseUrl: string): string {
   const trimmed = baseUrl.trim().replace(/\/+$/, '')
@@ -57,7 +58,9 @@ function buildResponsesInput(messages: ChatMessage[]): {
       items.push({
         type: 'function_call_output',
         call_id: m.tool_call_id || '',
-        output: m.content,
+        // Strip inline base64 dataURLs (ImageGenerate / VideoGenerate output)
+        // so we don't echo multi-MB media on subsequent turns.
+        output: stripInlineMedia(m.content),
       })
       continue
     }
