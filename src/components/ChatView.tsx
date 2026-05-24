@@ -71,13 +71,14 @@ export default function ChatView({
   /** map tool_call_id → result text (already in messages but cached for live render) */
   const [toolResults, setToolResults] = useState<Record<string, { text: string; error?: boolean }>>({})
   /** which tool calls are currently running */
-  const [runningCalls, setRunningCalls] = useState<Set<string>>(new Set())
+  const [runningCalls, setRunningCalls] = useState<Map<string, string>>(new Map())
   /** show slash menu */
   const [showSlashMenu, setShowSlashMenu] = useState(false)
   /** pending file/image attachments */
   const [attachments, setAttachments] = useState<Attachment[]>([])
   /** retry state surfaced by streamChat (null when not retrying) */
   const [retryInfo, setRetryInfo] = useState<{ attempt: number; total: number; reason: string } | null>(null)
+  const [introCollapsed, setIntroCollapsed] = useState(false)
 
   const abortRef = useRef<AbortController | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -115,7 +116,10 @@ export default function ChatView({
     if (conversationId) {
       const conv = loadConversations().find((c) => c.id === conversationId)
       if (conv) {
-        setMessages(conv.messages.filter((m) => m.role !== 'system' || !m.content.startsWith('[base]')))
+        const visibleMessages = conv.messages.filter((m) => m.role !== 'system' || !m.content.startsWith('[base]'))
+        setMessages(visibleMessages)
+        setToolResults(restoreToolResults(visibleMessages))
+        setRunningCalls(new Map())
         setConvId(conv.id)
         if (conv.todos) setTodos(conv.todos)
         if (conv.planMode) setPlanMode(conv.planMode)
@@ -126,6 +130,8 @@ export default function ChatView({
       setTodos([])
       setPlanMode(false)
       setPlanDraft('')
+      setToolResults({})
+      setRunningCalls(new Map())
     }
   }, [conversationId])
 
@@ -142,16 +148,19 @@ export default function ChatView({
   }
 
   useEffect(() => {
-    if (!isNearBottomRef.current && !streaming) return
+    if (!isNearBottomRef.current) return
     scrollToBottom()
   }, [messages, streaming])
 
   // While streaming, keep scrolling to bottom at a steady interval so
   // late-loading images / tool blocks that resize the container don't leave
-  // the user stuck mid-page.
+  // the user stuck mid-page. Respects isNearBottom — if user scrolled up,
+  // stop auto-scrolling so they can read history.
   useEffect(() => {
     if (!streaming) return
-    const id = setInterval(scrollToBottom, 200)
+    const id = setInterval(() => {
+      if (isNearBottomRef.current) scrollToBottom()
+    }, 200)
     return () => clearInterval(id)
   }, [streaming])
 
@@ -161,6 +170,10 @@ export default function ChatView({
     ta.style.height = 'auto'
     ta.style.height = Math.min(ta.scrollHeight, 200) + 'px'
   }, [input])
+
+  useEffect(() => {
+    if (!streaming) textareaRef.current?.focus()
+  }, [conversationId, streaming])
 
   // Show slash menu when user types "/"
   useEffect(() => {
@@ -183,7 +196,7 @@ export default function ChatView({
     if (isSlashCommand(content)) {
       const match = findCommand(content)
       if (match) {
-        const session = { todos, tasks, planMode, planDraft }
+        const session = { todos, tasks, planMode, planDraft, cwd }
         const res = await match.cmd.run({
           raw: content,
           args: match.args,
@@ -301,11 +314,11 @@ export default function ChatView({
           setMessages(log.filter((m) => m !== baseHistory[0]).map(cloneMessage))
         },
         onToolStart: (tc) => {
-          setRunningCalls((s) => new Set([...s, tc.id]))
+          setRunningCalls((s) => new Map([...s, [tc.id, tc.name]]))
         },
         onToolEnd: (tc, result) => {
           setRunningCalls((s) => {
-            const n = new Set(s)
+            const n = new Map(s)
             n.delete(tc.id)
             return n
           })
@@ -368,7 +381,7 @@ export default function ChatView({
     setPlanMode(false)
     setPlanDraft('')
     setToolResults({})
-    setRunningCalls(new Set())
+    setRunningCalls(new Map())
     setAttachments([])
     setError(null)
     navigate(`/${featureId}`)
@@ -471,29 +484,61 @@ export default function ChatView({
 
       <PlanBanner active={planMode} draft={planDraft} onToggle={() => setPlanMode(!planMode)} />
 
+      {/* Global AI status bar */}
+      {streaming && (() => {
+        const names = [...runningCalls.values()]
+        const hasImage = names.includes('ImageGenerate')
+        const hasVideo = names.includes('VideoGenerate')
+        const hasTool = names.length > 0
+        const emoji = hasImage ? '🎨' : hasVideo ? '🎬' : hasTool ? '🔧' : retryInfo ? '🔄' : '💭'
+        const label = hasImage ? `正在生成图片…`
+          : hasVideo ? '正在生成视频…'
+          : hasTool ? `正在执行 ${names.join(', ')}…`
+          : retryInfo ? `正在重试 (${retryInfo.attempt}/${retryInfo.total})…`
+          : '正在思考…'
+        return (
+          <div className="shrink-0 flex items-center gap-2 px-3 py-1.5 text-xs text-ink-600 bg-ink-50 rounded-lg mb-1 animate-pulse">
+            <span>{emoji}</span>
+            <span>{label}</span>
+          </div>
+        )
+      })()}
+
       <div ref={scrollRef} onScroll={onScrollContainer} className="flex-1 overflow-y-auto card p-4 sm:p-5 space-y-3">
         {messages.length === 0 && (
-          <div>
-            {typeof introNode === 'function' ? introNode({ send }) : introNode}
-            {presetSuggestions.length > 0 && (
-              <div className="mt-4">
-                <div className="text-xs text-ink-500 mb-2">试试问问：</div>
-                <div className="flex flex-wrap gap-2">
-                  {presetSuggestions.map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => send(s)}
-                      className="text-xs px-3 py-1.5 rounded-full bg-ink-100 text-ink-700 hover:bg-ink-200 transition-colors"
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            {enableTools && (
-              <div className="mt-4 text-xs text-ink-500">
-                💡 在输入框开头输入 <code className="bg-ink-100 px-1 rounded">/</code> 唤起命令；模型会自动调用工具
+          <div className="rounded-xl border border-ink-100 bg-white/70">
+            <button
+              type="button"
+              onClick={() => setIntroCollapsed(v => !v)}
+              className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-ink-700"
+            >
+              <span className="min-w-0 truncate">{featureTitle} · 介绍与示例</span>
+              <span className="shrink-0 text-xs text-ink-400">{introCollapsed ? '展开' : '收起'}</span>
+            </button>
+            {!introCollapsed && (
+              <div className="border-t border-ink-100 px-3 py-3">
+                {typeof introNode === 'function' ? introNode({ send }) : introNode}
+                {presetSuggestions.length > 0 && (
+                  <div className="mt-4">
+                    <div className="text-xs text-ink-500 mb-2">试试问问：</div>
+                    <div className="flex flex-wrap gap-2">
+                      {presetSuggestions.map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => send(s)}
+                          className="text-xs px-3 py-1.5 rounded-full bg-ink-100 text-ink-700 hover:bg-ink-200 transition-colors"
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {enableTools && (
+                  <div className="mt-4 text-xs text-ink-500">
+                    💡 在输入框开头输入 <code className="bg-ink-100 px-1 rounded">/</code> 唤起命令；模型会自动调用工具
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -597,6 +642,7 @@ export default function ChatView({
             </button>
             <textarea
               ref={textareaRef}
+              autoFocus
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
@@ -610,7 +656,7 @@ export default function ChatView({
               onPaste={handlePaste}
               placeholder={placeholder}
               rows={1}
-              className="flex-1 resize-none px-3 py-2 bg-transparent focus:outline-none text-sm placeholder-ink-400"
+              className="flex-1 resize-none px-3 py-2 bg-transparent focus:outline-none text-sm text-ink-900 placeholder-ink-400 caret-ink-900 cursor-text"
               style={{ maxHeight: '200px' }}
             />
             {streaming ? (
@@ -643,3 +689,15 @@ function cloneMessage(m: ChatMessage): ChatMessage {
   }
 }
 
+function restoreToolResults(messages: ChatMessage[]): Record<string, { text: string; error?: boolean }> {
+  const restored: Record<string, { text: string; error?: boolean }> = {}
+  for (const m of messages) {
+    if (m.role === 'tool' && m.tool_call_id) {
+      restored[m.tool_call_id] = {
+        text: m.content,
+        error: /failed|失败|error/i.test(m.content),
+      }
+    }
+  }
+  return restored
+}

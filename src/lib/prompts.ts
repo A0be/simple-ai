@@ -1,4 +1,3 @@
-import { cliCapabilitiesPrompt } from './cliDetector'
 import { getCapabilityPrompt } from './agentCapabilities'
 
 const COMMON_TOOL_NOTE = `
@@ -11,6 +10,7 @@ const COMMON_TOOL_NOTE = `
 - **WebFetch** — 抓取 URL 内容（CORS 受限，桌面端最稳）
 - **WebSearch** — 搜索网络（DuckDuckGo，可能受 CORS 限制）
 - **Skill** — 加载某个领域 skill（如 "tarot"、"bazi"、"code-investigation"）
+- **ImageGenerate** — 根据用户描述生成图片；调用前必须先用 AskUserQuestion 获得用户同意
 - **Agent** — 派遣子代理处理可独立的子任务
 - **TaskCreate/Update/List/Get/Output/Stop** — 跟踪长期任务
 - (桌面版/已连接本机) **FileRead/FileWrite/FileEdit/Glob/Grep/Bash** — 本地文件系统与命令执行
@@ -19,7 +19,8 @@ const COMMON_TOOL_NOTE = `
 1. 主动使用 TodoWrite 跟踪多步任务；只在 AskUserQuestion 真正需要时调用。
 2. 调用前先想清楚为什么；调用后用结果引导下一步。
 3. 复杂改动先 EnterPlanMode 做计划，避免直接动手。
-4. 在不需要工具时直接回答；不要为了用工具而用工具。
+4. 用户明确要求生成图片时，先用 AskUserQuestion 展示 prompt/尺寸/张数并询问是否同意；只有用户同意后才能调用 ImageGenerate，并传 confirmed=true。
+5. 在不需要工具时直接回答；不要为了用工具而用工具。
 `
 
 export const PROMPTS = {
@@ -386,8 +387,7 @@ ${COMMON_TOOL_NOTE}`,
 - 不要过度使用工具，简单问题直接回答。
 - 桌面版（Electron/Tauri）或已连接本机助手时，FileRead/FileWrite/FileEdit/Glob/Grep/Bash 工具可用，请主动使用它们读写文件和执行命令。
 - 纯 Web 模式（未连接本机）：文件/Shell 工具不可用，建议用户连接本机助手。
-- 如果检测到本机有 Claude Code / Codex / Aider 等 CLI 工具，可以通过 Bash 工具调用它们委托处理复杂开发任务。
-- 优先使用内置工具，只在需要本地文件/shell 操作时才调用外部 CLI。${COMMON_TOOL_NOTE}`
+- 优先使用内置工具完成开发任务；不要把任务委托给外部 CLI agent。${COMMON_TOOL_NOTE}`
 }
 
 export type PromptKey = keyof typeof PROMPTS
@@ -396,7 +396,6 @@ export type PromptKey = keyof typeof PROMPTS
  * Generate a system prompt for an agent from the agents catalog.
  */
 export function getAgentPrompt(agent: { name: string; nameEn: string; desc: string; expertise: string; whenToUse: string }): string {
-  const cliInfo = cliCapabilitiesPrompt()
   return `你是「${agent.name}」（${agent.nameEn}），${agent.desc}。
 
 ## 你的专业领域
@@ -424,7 +423,7 @@ ${agent.whenToUse}
 - **EnterPlanMode / ExitPlanMode** — 复杂任务先做计划再执行
 
 当用户要求你帮忙写代码、修改文件、查看项目结构、运行命令时，直接调用对应工具执行，不要仅给出建议。
-${cliInfo}${COMMON_TOOL_NOTE}`
+${COMMON_TOOL_NOTE}`
 }
 
 /**
@@ -434,7 +433,6 @@ ${cliInfo}${COMMON_TOOL_NOTE}`
  */
 export function composeSystemPrompt(featurePrompt: string, projectContext?: string): string {
   const ctx = (projectContext || '').trim()
-  const cliInfo = cliCapabilitiesPrompt()
   const capInfo = getCapabilityPrompt()
   const parts: string[] = []
 
@@ -448,7 +446,6 @@ ${ctx}
 
   parts.push(featurePrompt)
 
-  if (cliInfo) parts.push(cliInfo)
   if (capInfo) parts.push(capInfo)
 
   return parts.join('\n\n')

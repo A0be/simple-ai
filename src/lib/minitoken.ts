@@ -17,16 +17,6 @@ export interface MiniTokenUserInfo {
   group: string
 }
 
-export interface MiniTokenLogEntry {
-  created_at: number
-  model_name: string
-  token_name: string
-  quota: number
-  prompt_tokens: number
-  completion_tokens: number
-  content: string
-}
-
 export interface MiniTokenToken {
   id: number
   key: string
@@ -100,14 +90,6 @@ export async function fetchUserInfo(session: MiniTokenSession): Promise<MiniToke
     username: d.username || d.display_name || '',
     group: d.group || '',
   }
-}
-
-export async function fetchLogs(session: MiniTokenSession, page = 0): Promise<MiniTokenLogEntry[]> {
-  const now = Math.floor(Date.now() / 1000)
-  const start = now - 86400 * 7
-  const r = await callApi(`/api/log/self?p=${page}&page_size=20&type=0&token_name=&model_name=&start_timestamp=${start}&end_timestamp=${now}&group=&user_id=`, session)
-  if (!r?.success) return []
-  return r.data?.logs || r.data || []
 }
 
 export async function fetchTokens(session: MiniTokenSession): Promise<MiniTokenToken[]> {

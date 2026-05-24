@@ -21,10 +21,6 @@ export interface ApiConfig {
   skillsDir?: string
   /** image generation model (defaults to main if not set) */
   imageModel?: ModelEndpoint
-  /** audio/TTS model */
-  audioModel?: ModelEndpoint
-  /** video generation model */
-  videoModel?: ModelEndpoint
 }
 
 /** A user-defined skill — same shape as BUILTIN_SKILLS entries but persisted in localStorage. */

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { ToolCall } from '@/types'
 import ThinkingIndicator from './ThinkingIndicator'
+import { electronMediaSaveAs, isElectron } from '@/lib/electron'
 
 interface Props {
   call: ToolCall
@@ -85,13 +86,13 @@ function extractMediaFromResult(name: string, resultText?: string): { images?: s
   if (!resultText) return null
   if (name === 'ImageGenerate') {
     const urls: string[] = []
-    const re = /\[Image \d+\]: (https?:\/\/\S+|data:image\/\S+|app-media:\/\/\/\S+)/g
+    const re = /\[Image \d+\]: (https?:\/\/\S+|data:image\/\S+|app-media:\/\/\S+)/g
     let m
     while ((m = re.exec(resultText)) !== null) urls.push(m[1])
     if (urls.length) return { images: urls }
   }
   if (name === 'VideoGenerate') {
-    const m = resultText.match(/Video URL: (https?:\/\/\S+|app-media:\/\/\/\S+)/)
+    const m = resultText.match(/Video URL: (https?:\/\/\S+|app-media:\/\/\S+)/)
     if (m) return { videoUrl: m[1] }
   }
   return null
@@ -103,8 +104,13 @@ async function downloadMedia(url: string, suggestedName: string): Promise<void> 
   // URLs use the anchor directly. If anything fails we fall back to opening
   // the URL in a new tab so the user can still save it manually.
   try {
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      const resp = await fetch(url, { mode: 'cors' })
+    if (isElectron()) {
+      await electronMediaSaveAs({ sourceUrl: url, suggestedName })
+      return
+    }
+
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('app-media://')) {
+      const resp = await fetch(url, url.startsWith('app-media://') ? undefined : { mode: 'cors' })
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
       const blob = await resp.blob()
       const objUrl = URL.createObjectURL(blob)
@@ -179,12 +185,9 @@ export default function ToolCallBlock({ call, resultText, isError, isRunning }: 
         <span className="text-xs text-ink-400 shrink-0">{expanded ? '▾' : '▸'}</span>
       </button>
 
-      {isRunning && (call.name === 'ImageGenerate' || call.name === 'VideoGenerate') && !media && (
+      {isRunning && call.name === 'ImageGenerate' && !media && (
         <div className="px-3 pb-3">
-          <ThinkingIndicator
-            variant={call.name === 'ImageGenerate' ? 'image' : 'video'}
-            sub={call.name === 'VideoGenerate' ? '视频生成耗时较长，最长可能等待 10 分钟' : '通常 30-90 秒'}
-          />
+          <ThinkingIndicator variant="image" sub="通常 30-90 秒" />
         </div>
       )}
 

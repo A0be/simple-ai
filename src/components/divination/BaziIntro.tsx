@@ -44,14 +44,20 @@ export default function BaziIntro({ onSubmit }: Props) {
   }
 
   return (
-    <div className="card p-5 mb-3 bg-gradient-to-br from-amber-50 via-white to-rose-50">
-      <div className="text-sm font-medium text-ink-900 mb-3">填写出生信息开始排盘</div>
+    <div className="card p-5 mb-3 divination-panel bazi-panel">
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <div>
+          <div className="text-sm font-semibold text-ink-900">填写出生信息开始排盘</div>
+          <div className="text-xs text-ink-500 mt-0.5">日期、时辰、性别会影响四柱与大运推算</div>
+        </div>
+        <div className="divination-orbit" aria-hidden="true"><span>甲</span><span>子</span><span>运</span></div>
+      </div>
 
       <div className="space-y-3">
         <div className="flex gap-2">
           <button
             onClick={() => setCalendar('solar')}
-            className={`btn flex-1 ${
+            className={`btn flex-1 divination-toggle ${
               calendar === 'solar' ? 'bg-ink-900 text-white' : 'bg-ink-100 text-ink-700'
             }`}
           >
@@ -59,7 +65,7 @@ export default function BaziIntro({ onSubmit }: Props) {
           </button>
           <button
             onClick={() => setCalendar('lunar')}
-            className={`btn flex-1 ${
+            className={`btn flex-1 divination-toggle ${
               calendar === 'lunar' ? 'bg-ink-900 text-white' : 'bg-ink-100 text-ink-700'
             }`}
           >
@@ -134,7 +140,7 @@ export default function BaziIntro({ onSubmit }: Props) {
           <div className="flex gap-2">
             <button
               onClick={() => setGender('male')}
-              className={`btn flex-1 ${
+              className={`btn flex-1 divination-toggle ${
                 gender === 'male' ? 'bg-ink-900 text-white' : 'bg-ink-100 text-ink-700'
               }`}
             >
@@ -142,7 +148,7 @@ export default function BaziIntro({ onSubmit }: Props) {
             </button>
             <button
               onClick={() => setGender('female')}
-              className={`btn flex-1 ${
+              className={`btn flex-1 divination-toggle ${
                 gender === 'female' ? 'bg-ink-900 text-white' : 'bg-ink-100 text-ink-700'
               }`}
             >
@@ -168,10 +174,10 @@ export default function BaziIntro({ onSubmit }: Props) {
               <button
                 key={f}
                 onClick={() => toggleFocus(f)}
-                className={`text-xs px-3 py-1.5 rounded-full transition-colors ${
+                className={`text-xs px-3 py-1.5 rounded-full transition-all ${
                   focus.includes(f)
-                    ? 'bg-ink-900 text-white'
-                    : 'bg-ink-100 text-ink-700 hover:bg-ink-200'
+                    ? 'bg-ink-900 text-white shadow-sm -translate-y-0.5'
+                    : 'bg-ink-100 text-ink-700 hover:bg-ink-200 hover:-translate-y-0.5'
                 }`}
               >
                 {f}
@@ -179,6 +185,13 @@ export default function BaziIntro({ onSubmit }: Props) {
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-4 gap-1.5">
+        {['日期', '时辰', '性别', '关注'].map((label, i) => {
+          const done = [!!date, unknownTime || hour !== '', !!gender, focus.length > 0][i]
+          return <div key={label} className={`divination-step ${done ? 'done' : ''}`}>{label}</div>
+        })}
       </div>
 
       <button

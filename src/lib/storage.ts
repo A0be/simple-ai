@@ -31,8 +31,6 @@ export function loadConfig(): ApiConfig {
       customSkills: parsed.customSkills ?? DEFAULT_CONFIG.customSkills,
       skillsDir: parsed.skillsDir ?? DEFAULT_CONFIG.skillsDir,
       imageModel: parsed.imageModel,
-      audioModel: parsed.audioModel,
-      videoModel: parsed.videoModel,
     }
   } catch {
     return { ...DEFAULT_CONFIG }

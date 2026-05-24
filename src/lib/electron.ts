@@ -70,6 +70,10 @@ export async function electronGetWorkspace(): Promise<string | null> {
   return api().getWorkspace()
 }
 
-export async function electronMediaSave(opts: { base64?: string; downloadUrl?: string; ext: string }): Promise<{ fileName: string; src: string }> {
+export async function electronMediaSave(opts: { base64?: string; downloadUrl?: string; ext: string; dir?: string }): Promise<{ fileName: string; path?: string; src: string }> {
   return api().mediaSave(opts)
+}
+
+export async function electronMediaSaveAs(opts: { sourceUrl: string; suggestedName?: string }): Promise<{ canceled?: boolean; path?: string }> {
+  return api().mediaSaveAs(opts)
 }

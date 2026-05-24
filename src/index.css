@@ -13,6 +13,7 @@
   body,
   #root {
     height: 100%;
+    min-height: 100dvh;
     background: #f6f7f9;
   }
 
@@ -34,7 +35,7 @@
 
 @layer components {
   .card {
-    @apply rounded-xl-soft bg-white shadow-card transition-all;
+    @apply rounded-xl-soft bg-white shadow-card transition-all min-w-0;
   }
 
   .card-hover {
@@ -42,7 +43,7 @@
   }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed min-w-0;
   }
 
   .btn-primary {
@@ -58,7 +59,7 @@
   }
 
   .input {
-    @apply w-full px-4 py-3 rounded-xl border border-ink-200 bg-white text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-ink-900 focus:border-transparent transition-all;
+    @apply w-full min-w-0 px-4 py-3 rounded-xl border border-ink-200 bg-white text-ink-900 placeholder-ink-400 caret-ink-900 cursor-text focus:outline-none focus:ring-2 focus:ring-ink-900 focus:border-transparent transition-all;
   }
 
   .label {
@@ -173,6 +174,206 @@
 }
 
 /* ---------- 塔罗抽卡动画 ---------- */
+.divination-panel {
+  position: relative;
+  overflow: hidden;
+  animation: panel-rise 0.38s ease-out both;
+}
+
+.divination-panel::before {
+  content: '';
+  position: absolute;
+  inset: -40%;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255,255,255,0.78), transparent 18%),
+    radial-gradient(circle at 80% 10%, rgba(255,255,255,0.55), transparent 16%);
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.divination-panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+.bazi-panel {
+  background: linear-gradient(135deg, #fff7ed 0%, #fff 48%, #fff1f2 100%);
+}
+
+.ziwei-panel {
+  background: linear-gradient(135deg, #f5f3ff 0%, #fff 48%, #ecfeff 100%);
+}
+
+.liuyao-panel {
+  background: linear-gradient(135deg, #f5f5f4 0%, #fff 48%, #ecfdf5 100%);
+}
+
+.tarot-panel {
+  background:
+    radial-gradient(circle at 20% 15%, rgba(250, 204, 21, 0.2), transparent 28%),
+    linear-gradient(135deg, #eef2ff 0%, #fff 48%, #fffbeb 100%);
+}
+
+@keyframes panel-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.divination-choice {
+  border-radius: 12px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  background: rgba(255,255,255,0.86);
+  box-shadow: 0 10px 20px -18px rgba(15, 23, 42, 0.55);
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+.divination-choice:hover {
+  transform: translateY(-2px);
+  border-color: rgba(99, 102, 241, 0.45);
+  box-shadow: 0 16px 30px -18px rgba(15, 23, 42, 0.65);
+}
+
+.divination-toggle {
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+.divination-toggle:hover {
+  transform: translateY(-1px);
+}
+
+.divination-step {
+  border-radius: 999px;
+  padding: 0.35rem 0.5rem;
+  text-align: center;
+  font-size: 0.68rem;
+  color: #64748b;
+  background: rgba(241, 245, 249, 0.8);
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  transition: all 0.25s ease;
+}
+
+.divination-step.done {
+  color: white;
+  background: #0f172a;
+  border-color: #0f172a;
+  box-shadow: 0 10px 18px -14px rgba(15, 23, 42, 0.85);
+}
+
+.divination-orbit {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  border-radius: 999px;
+  border: 1px solid rgba(217, 119, 6, 0.22);
+  background: rgba(255, 255, 255, 0.72);
+  animation: orbit-spin 12s linear infinite;
+  flex: none;
+}
+
+.divination-orbit span {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+}
+
+.divination-orbit span:nth-child(1) { left: 18px; top: -7px; }
+.divination-orbit span:nth-child(2) { right: -7px; bottom: 9px; }
+.divination-orbit span:nth-child(3) { left: -7px; bottom: 9px; }
+
+@keyframes orbit-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.ziwei-mini-chart {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  flex: none;
+}
+
+.ziwei-mini-chart span {
+  border-radius: 5px;
+  background: rgba(139, 92, 246, 0.14);
+  border: 1px solid rgba(139, 92, 246, 0.18);
+  animation: chart-pulse 2.8s ease-in-out infinite;
+}
+
+.ziwei-mini-chart span:nth-child(2n) {
+  animation-delay: 0.25s;
+}
+
+.ziwei-mini-chart .center {
+  background: rgba(15, 23, 42, 0.84);
+}
+
+@keyframes chart-pulse {
+  0%, 100% { opacity: 0.68; transform: scale(1); }
+  50% { opacity: 1; transform: scale(0.92); }
+}
+
+.coin-cluster {
+  position: relative;
+  width: 70px;
+  height: 52px;
+  flex: none;
+}
+
+.coin-cluster span {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  color: #14532d;
+  background: radial-gradient(circle at 35% 30%, #fef9c3, #d9f99d 65%, #86efac);
+  border: 1px solid rgba(22, 101, 52, 0.25);
+  box-shadow: 0 8px 16px -10px rgba(20, 83, 45, 0.65);
+}
+
+.coin-cluster span:nth-child(1) { left: 0; bottom: 2px; }
+.coin-cluster span:nth-child(2) { left: 20px; top: 0; }
+.coin-cluster span:nth-child(3) { right: 0; bottom: 2px; }
+
+.coin-cluster.throwing span {
+  animation: coin-toss 0.55s ease-in-out infinite;
+}
+
+.coin-cluster.throwing span:nth-child(2) { animation-delay: 0.08s; }
+.coin-cluster.throwing span:nth-child(3) { animation-delay: 0.16s; }
+
+@keyframes coin-toss {
+  0%, 100% { transform: translateY(0) rotateY(0deg); }
+  50% { transform: translateY(-10px) rotateY(180deg); }
+}
+
+.yao-row {
+  border-radius: 10px;
+  padding: 0.25rem 0.5rem;
+  transition: all 0.25s ease;
+}
+
+.yao-row.filled {
+  background: rgba(236, 253, 245, 0.8);
+  animation: yao-in 0.28s ease-out both;
+}
+
+@keyframes yao-in {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
 .tarot-stage {
   perspective: 1200px;
   perspective-origin: 50% 50%;
@@ -268,7 +469,7 @@
 }
 
 .tarot-card.deal-in {
-  animation: tarot-deal 0.6s cubic-bezier(0.34, 1.36, 0.64, 1) forwards;
+  animation: tarot-deal 0.68s cubic-bezier(0.34, 1.36, 0.64, 1) forwards;
   opacity: 0;
 }
 
@@ -290,6 +491,39 @@
 
 .tarot-fan-card:hover {
   transform: translateY(-12px) scale(1.05);
+}
+
+.tarot-fan-card.picked {
+  filter: saturate(0.8);
+}
+
+.tarot-art {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 4px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255,255,255,0.92), transparent 28%),
+    radial-gradient(circle at center, hsl(var(--tarot-hue), 58%, 78%), hsl(var(--tarot-hue), 55%, 48%));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.5), 0 10px 18px -12px rgba(15,23,42,0.75);
+}
+
+.tarot-art-orbit {
+  position: absolute;
+  inset: 7px;
+  border-radius: 999px;
+  border: 1px dashed rgba(120, 53, 15, 0.45);
+  animation: orbit-spin 9s linear infinite;
+}
+
+.tarot-art-glyph {
+  position: relative;
+  z-index: 1;
+  font-size: 30px;
+  filter: drop-shadow(0 2px 2px rgba(15,23,42,0.22));
 }
 
 /* 牌堆叠效果 */
@@ -334,4 +568,3 @@
   transform: translate(-1.5px, -1.5px);
   opacity: 0.9;
 }
-

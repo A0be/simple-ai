@@ -30,6 +30,7 @@ export interface SlashContext {
     tasks: AgentTask[]
     planMode: boolean
     planDraft: string
+    cwd?: string
   }
   setMessages: (m: ChatMessage[]) => void
   setPlanMode: (v: boolean) => void
@@ -131,6 +132,63 @@ export const SLASH_COMMANDS: SlashCommand[] = [
       return {
         kind: 'message',
         text: `## 当前工具 (${env} 运行时, ${list.length} 个)\n${lines}`
+      }
+    }
+  },
+  {
+    name: 'context',
+    description: '查看当前对话上下文、工具调用和工作目录',
+    visible: true,
+    run: ({ messages, registry, session }) => {
+      const visible = messages.filter((m) => m.role !== 'system' || !m.content.startsWith('[base]'))
+      const byRole = visible.reduce<Record<string, number>>((acc, m) => {
+        acc[m.role] = (acc[m.role] || 0) + 1
+        return acc
+      }, {})
+      const toolCalls = visible.flatMap((m) => m.tool_calls || [])
+      const toolResults = visible.filter((m) => m.role === 'tool')
+      const chars = visible.reduce((n, m) => n + (m.content || '').length, 0)
+      const approxTokens = Math.ceil(chars / 3.2)
+      const env = typeof window !== 'undefined' &&
+        ((window as unknown as { electronAPI?: unknown }).electronAPI ||
+          (window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__)
+        ? 'desktop'
+        : 'web'
+      const tools = registry.list(env === 'desktop' ? 'tauri' : 'web')
+      const topTools = Object.entries(
+        toolCalls.reduce<Record<string, number>>((acc, c) => {
+          acc[c.name] = (acc[c.name] || 0) + 1
+          return acc
+        }, {})
+      )
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
+        .map(([name, count]) => `- ${name}: ${count}`)
+        .join('\n') || '- 暂无工具调用'
+
+      return {
+        kind: 'message',
+        text: `## 当前上下文
+
+| 项目 | 值 |
+|---|---:|
+| 消息数 | ${visible.length} |
+| 用户消息 | ${byRole.user || 0} |
+| 助手消息 | ${byRole.assistant || 0} |
+| 工具结果 | ${toolResults.length} |
+| 工具调用 | ${toolCalls.length} |
+| 估算 token | ${approxTokens.toLocaleString()} |
+| 可用工具 | ${tools.length} |
+| Plan mode | ${session.planMode ? '开启' : '关闭'} |
+| Todos | ${session.todos.length} |
+| Tasks | ${session.tasks.length} |
+
+**工作目录:** ${session.cwd || '未选择'}
+
+### 工具调用排行
+${topTools}
+
+提示：对话变长时可用 \`/compact\` 压缩历史；需要生成图片时，如果未选择工作目录，ImageGenerate 会先提示选择保存目录。`
       }
     }
   },

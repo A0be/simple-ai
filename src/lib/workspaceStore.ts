@@ -1,5 +1,5 @@
 /**
- * Workspace store — shared across CompanionStatus, ChatView, and tools.
+ * Workspace store — shared across ChatView and tools.
  * In Electron: set via file picker. In companion mode: set via companion API.
  */
 

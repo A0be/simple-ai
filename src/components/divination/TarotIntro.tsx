@@ -96,7 +96,7 @@ export default function TarotIntro({ onSubmit }: Props) {
   }
 
   return (
-    <div className="card p-5 mb-3 bg-gradient-to-br from-indigo-50 via-white to-amber-50">
+    <div className="card p-5 mb-3 divination-panel tarot-panel">
       {/* 顶部：问题输入 */}
       <div className="mb-4">
         <label className="label">心中默念你想问的事（选填）</label>
@@ -118,7 +118,7 @@ export default function TarotIntro({ onSubmit }: Props) {
               <button
                 key={s.id}
                 onClick={() => startShuffle(s)}
-                className="card p-3 text-left card-hover bg-white"
+                className="divination-choice p-3 text-left"
               >
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-ink-900">{s.name}</span>
@@ -166,7 +166,7 @@ export default function TarotIntro({ onSubmit }: Props) {
                   <div
                     key={i}
                     onClick={() => !isPicked && !isFull && onPick(i)}
-                    className="tarot-fan-card"
+                    className={`tarot-fan-card ${isPicked ? 'picked' : ''}`}
                     style={{
                       marginLeft: i === 0 ? 0 : '-32px',
                       transform: `translateY(${
@@ -224,7 +224,10 @@ export default function TarotIntro({ onSubmit }: Props) {
                       <div className="text-[8px] sm:text-[9px] font-semibold tracking-widest text-amber-700/60 mb-0.5">
                         {ROMAN[d.card.id]}
                       </div>
-                      <div className="text-4xl sm:text-5xl mb-1 drop-shadow-sm">{d.card.emoji}</div>
+                      <div className="tarot-art" style={{ ['--tarot-hue' as string]: hue }}>
+                        <div className="tarot-art-orbit" />
+                        <div className="tarot-art-glyph">{d.card.emoji}</div>
+                      </div>
                       <div className="text-[11px] sm:text-xs font-bold text-amber-900 leading-tight">
                         {d.card.nameChinese}
                       </div>

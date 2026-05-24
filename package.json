@@ -1,7 +1,7 @@
 {
   "name": "simple-ai",
   "private": true,
-  "version": "1.0.11",
+  "version": "1.0.12",
   "type": "module",
   "main": "electron/main.cjs",
   "description": "一个面向新手的极简 AI 工具，配置 API 地址和 Key 即可使用",
@@ -14,16 +14,13 @@
     "tauri:dev": "npm run icons && tauri dev",
     "tauri:build": "npm run icons && tauri build",
     "electron:dev": "cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron .",
-    "electron:build": "node scripts/bundle-claude.mjs && vite build --base ./ && electron-builder --win",
-    "electron:pack": "node scripts/bundle-claude.mjs && vite build --base ./ && electron-builder --win --dir"
+    "electron:build": "vite build --base ./ && electron-builder --win",
+    "electron:pack": "vite build --base ./ && electron-builder --win --dir"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.1.1",
-    "@xterm/addon-fit": "^0.11.0",
-    "@xterm/xterm": "^6.0.0",
     "electron-updater": "^6.8.3",
     "fast-glob": "^3.3.3",
-    "node-pty": "^1.1.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.28.0"
@@ -72,19 +69,10 @@
       {
         "from": "public/icons/icon-512.png",
         "to": "icon.png"
-      },
-      {
-        "from": "resources/claude/claude.exe",
-        "to": "claude/claude.exe",
-        "filter": [
-          "**/*"
-        ]
       }
     ],
     "asar": true,
-    "asarUnpack": [
-      "**/node_modules/node-pty/**"
-    ],
+    "asarUnpack": [],
     "npmRebuild": false,
     "compression": "maximum",
     "win": {

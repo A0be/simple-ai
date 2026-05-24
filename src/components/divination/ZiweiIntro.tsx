@@ -48,10 +48,17 @@ export default function ZiweiIntro({ onSubmit }: Props) {
   }
 
   return (
-    <div className="card p-5 mb-3 bg-gradient-to-br from-violet-50 via-white to-sky-50">
-      <div className="text-sm font-medium text-ink-900 mb-1">填写农历出生信息</div>
-      <div className="text-xs text-ink-500 mb-3">
-        紫微斗数主要以农历计算。如果你只有公历，可以先在搜索引擎查"农历转换"。
+    <div className="card p-5 mb-3 divination-panel ziwei-panel">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <div className="text-sm font-semibold text-ink-900 mb-1">填写农历出生信息</div>
+          <div className="text-xs text-ink-500">
+            紫微斗数主要以农历计算。如果你只有公历，可以先在搜索引擎查"农历转换"。
+          </div>
+        </div>
+        <div className="ziwei-mini-chart" aria-hidden="true">
+          {Array.from({ length: 9 }).map((_, i) => <span key={i} className={i === 4 ? 'center' : ''} />)}
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -86,7 +93,7 @@ export default function ZiweiIntro({ onSubmit }: Props) {
           <div className="flex gap-2">
             <button
               onClick={() => setGender('male')}
-              className={`btn flex-1 ${
+              className={`btn flex-1 divination-toggle ${
                 gender === 'male' ? 'bg-ink-900 text-white' : 'bg-ink-100 text-ink-700'
               }`}
             >
@@ -94,7 +101,7 @@ export default function ZiweiIntro({ onSubmit }: Props) {
             </button>
             <button
               onClick={() => setGender('female')}
-              className={`btn flex-1 ${
+              className={`btn flex-1 divination-toggle ${
                 gender === 'female' ? 'bg-ink-900 text-white' : 'bg-ink-100 text-ink-700'
               }`}
             >
@@ -110,10 +117,10 @@ export default function ZiweiIntro({ onSubmit }: Props) {
               <button
                 key={g}
                 onClick={() => toggleGong(g)}
-                className={`text-xs px-3 py-1.5 rounded-full transition-colors ${
+                className={`text-xs px-3 py-1.5 rounded-full transition-all ${
                   focusGong.includes(g)
-                    ? 'bg-ink-900 text-white'
-                    : 'bg-ink-100 text-ink-700 hover:bg-ink-200'
+                    ? 'bg-violet-700 text-white shadow-sm -translate-y-0.5'
+                    : 'bg-ink-100 text-ink-700 hover:bg-violet-100 hover:-translate-y-0.5'
                 }`}
               >
                 {g}
@@ -121,6 +128,14 @@ export default function ZiweiIntro({ onSubmit }: Props) {
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-3 gap-1.5">
+        {[
+          ['农历', !!date],
+          ['时辰', !!shichen],
+          ['性别', !!gender],
+        ].map(([label, done]) => <div key={String(label)} className={`divination-step ${done ? 'done' : ''}`}>{label}</div>)}
       </div>
 
       <button

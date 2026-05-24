@@ -65,11 +65,18 @@ export default function LiuyaoIntro({ onSubmit }: Props) {
   }
 
   return (
-    <div className="card p-5 mb-3 bg-gradient-to-br from-stone-50 via-white to-emerald-50">
-      <div className="text-sm font-medium text-ink-900 mb-1">六爻起卦</div>
-      <div className="text-xs text-ink-500 mb-3">
-        点击下方按钮模拟摇铜钱，共需 6 次（从初爻到上爻）。
-        约定：三正面=老阳（动），三反面=老阴（动），二正一反=少阴，一正二反=少阳。
+    <div className="card p-5 mb-3 divination-panel liuyao-panel">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-sm font-semibold text-ink-900 mb-1">六爻起卦</div>
+          <div className="text-xs text-ink-500 mb-3">
+            点击下方按钮模拟摇铜钱，共需 6 次（从初爻到上爻）。
+            约定：三正面=老阳（动），三反面=老阴（动），二正一反=少阴，一正二反=少阳。
+          </div>
+        </div>
+        <div className={`coin-cluster ${throwing ? 'throwing' : ''}`} aria-hidden="true">
+          <span>乾</span><span>坤</span><span>变</span>
+        </div>
       </div>
 
       <div className="mb-3">
@@ -83,7 +90,7 @@ export default function LiuyaoIntro({ onSubmit }: Props) {
       </div>
 
       {/* 卦象展示 */}
-      <div className="bg-white rounded-xl p-4 border border-ink-200 mb-3">
+      <div className="bg-white/85 rounded-xl p-4 border border-ink-200 mb-3 shadow-sm">
         <div className="text-xs text-ink-500 mb-2 text-center">从下往上：第 1-6 爻</div>
         <div className="flex flex-col-reverse gap-2 items-center">
           {Array.from({ length: 6 }).map((_, i) => {
@@ -91,7 +98,7 @@ export default function LiuyaoIntro({ onSubmit }: Props) {
             return (
               <div
                 key={i}
-                className="flex items-center gap-3 w-full max-w-xs"
+                className={`yao-row flex items-center gap-3 w-full max-w-xs ${y ? 'filled' : ''}`}
               >
                 <div className="text-[10px] text-ink-400 w-6">第{i + 1}</div>
                 {y ? (

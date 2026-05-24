@@ -3,13 +3,11 @@ import { isElectron } from '@/lib/electron'
 import {
   type MiniTokenSession,
   type MiniTokenUserInfo,
-  type MiniTokenLogEntry,
   type MiniTokenToken,
   loadMiniTokenSession,
   saveMiniTokenSession,
   openMiniToken,
   fetchUserInfo,
-  fetchLogs,
   fetchTokens,
   formatQuota,
 } from '@/lib/minitoken'
@@ -21,7 +19,6 @@ interface Props {
 export default function MiniTokenPanel({ onKeyFound }: Props) {
   const [session, setSession] = useState<MiniTokenSession | null>(null)
   const [user, setUser] = useState<MiniTokenUserInfo | null>(null)
-  const [logs, setLogs] = useState<MiniTokenLogEntry[]>([])
   const [tokens, setTokens] = useState<MiniTokenToken[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -46,14 +43,12 @@ export default function MiniTokenPanel({ onKeyFound }: Props) {
     setLoading(true)
     setError(null)
     try {
-      const [u, l, t] = await Promise.all([
+      const [u, t] = await Promise.all([
         fetchUserInfo(s),
-        fetchLogs(s),
         fetchTokens(s),
       ])
       if (u) setUser(u)
       else setError('获取用户信息失败，请重新登录')
-      setLogs(l)
       setTokens(t)
     } catch {
       setError('请求失败')
@@ -109,7 +104,6 @@ export default function MiniTokenPanel({ onKeyFound }: Props) {
     saveMiniTokenSession(null)
     setSession(null)
     setUser(null)
-    setLogs([])
     setTokens([])
   }
 
@@ -164,7 +158,7 @@ export default function MiniTokenPanel({ onKeyFound }: Props) {
           <button onClick={handleRefreshAndApply} disabled={loading} className="btn-ghost text-xs" title="重新从 MiniToken 拉取 key 与地址并写入 Settings">
             {loading ? '刷新中…' : '🔁 刷新 API'}
           </button>
-          <button onClick={() => refreshData(session)} disabled={loading} className="btn-ghost text-xs" title="仅刷新余额/日志">
+          <button onClick={() => refreshData(session)} disabled={loading} className="btn-ghost text-xs" title="刷新余额和 API Key">
             {loading ? '…' : '🔄'}
           </button>
           {electron && (
@@ -227,37 +221,6 @@ export default function MiniTokenPanel({ onKeyFound }: Props) {
             ))}
           </div>
         </div>
-      )}
-
-      {/* Recent Logs */}
-      {logs.length > 0 && (
-        <details>
-          <summary className="text-xs font-medium text-ink-700 cursor-pointer hover:text-ink-900">
-            最近使用记录（{logs.length} 条）
-          </summary>
-          <div className="mt-2 max-h-48 overflow-y-auto">
-            <table className="w-full text-[11px]">
-              <thead>
-                <tr className="text-ink-500 border-b border-ink-100">
-                  <th className="text-left py-1 font-medium">时间</th>
-                  <th className="text-left py-1 font-medium">模型</th>
-                  <th className="text-right py-1 font-medium">Tokens</th>
-                  <th className="text-right py-1 font-medium">费用</th>
-                </tr>
-              </thead>
-              <tbody>
-                {logs.slice(0, 50).map((log, i) => (
-                  <tr key={i} className="border-b border-ink-50 hover:bg-ink-50">
-                    <td className="py-1 text-ink-500">{new Date(log.created_at * 1000).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
-                    <td className="py-1 font-mono text-ink-700 max-w-[120px] truncate">{log.model_name}</td>
-                    <td className="py-1 text-right text-ink-500">{((log.prompt_tokens || 0) + (log.completion_tokens || 0)).toLocaleString()}</td>
-                    <td className="py-1 text-right text-ink-700">{formatQuota(log.quota || 0)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </details>
       )}
 
       {error && <div className="text-xs text-red-600">{error}</div>}

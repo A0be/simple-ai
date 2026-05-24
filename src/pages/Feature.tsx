@@ -83,14 +83,14 @@ export default function Feature() {
   const intro = INTERACTIVE_INTROS[feature.id] ?? STATIC_INTROS[feature.id]
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col pt-4">
-      <div className="mb-3 shrink-0">
-        <button onClick={() => navigate(-1)} className="btn-ghost text-sm mb-2">← 返回</button>
-        <div className="flex items-center gap-2">
-          <span className="text-xl">{feature.emoji}</span>
-          <h1 className="text-lg font-semibold text-ink-900">{feature.title}</h1>
+    <div className="flex-1 min-h-0 flex flex-col pt-2">
+      <div className="mb-2 shrink-0 rounded-lg border border-ink-100 bg-white/70 px-3 py-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <button onClick={() => navigate(-1)} className="text-xs text-ink-500 hover:text-ink-900 shrink-0">← 返回</button>
+          <span className="text-base shrink-0">{feature.emoji}</span>
+          <h1 className="text-sm font-semibold text-ink-900 truncate">{feature.title}</h1>
+          <span className="hidden sm:inline text-xs text-ink-400 truncate">{feature.description}</span>
         </div>
-        <div className="text-xs text-ink-500 mt-0.5">{feature.description}</div>
       </div>
 
       <div className="flex-1 min-h-0">

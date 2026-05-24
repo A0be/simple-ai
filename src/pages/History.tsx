@@ -34,10 +34,22 @@ export default function History() {
     }
   }
 
+  const enterConversation = (c: ConversationMeta) => {
+    if (c.feature.startsWith('agent-')) {
+      const agentId = c.feature.slice('agent-'.length)
+      navigate(`/agent/${agentId}/${c.id}`)
+    } else {
+      navigate(`/${c.feature}/${c.id}`)
+    }
+  }
+
   return (
-    <div className="pt-4">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-semibold text-ink-900">历史记录</h1>
+    <div className="pt-3 sm:pt-4">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h1 className="text-xl font-semibold text-ink-900 sm:text-2xl">历史记录</h1>
+          <p className="mt-0.5 text-xs text-ink-500">点击记录可重新进入会话并继续对话</p>
+        </div>
         {convs.length > 0 && (
           <button onClick={handleClear} className="btn-ghost text-sm text-red-600 hover:bg-red-50">
             清空全部
@@ -56,71 +68,75 @@ export default function History() {
           }
         />
       ) : (
-        <div className="space-y-2">
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {convs.map((c) => {
             const lastMessage = c.messages
               .filter((m) => m.role !== 'system')
               .slice(-1)[0]
+            const hasImage = c.messages.some((m) => m.name === 'ImageGenerate' || m.content.includes('app-media://'))
             return (
-              <button
+              <article
                 key={c.id}
-                onClick={() => {
-                  // agent-xxx conversations route to /agent/xxx/:convId
-                  if (c.feature.startsWith('agent-')) {
-                    const agentId = c.feature.slice('agent-'.length)
-                    navigate(`/agent/${agentId}/${c.id}`)
-                  } else {
-                    navigate(`/${c.feature}/${c.id}`)
-                  }
-                }}
-                className="w-full card card-hover p-4 text-left active:scale-[0.995]"
+                className="card card-hover flex min-h-[150px] flex-col p-4 text-left active:scale-[0.995]"
+                onClick={() => enterConversation(c)}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                <div className="flex min-w-0 items-start justify-between gap-3">
+                  <button className="min-w-0 flex-1 text-left" onClick={() => enterConversation(c)}>
+                    <div className="flex min-w-0 items-center gap-2">
                       {(() => {
                         if (c.feature.startsWith('agent-')) {
                           const agent = getAgent(c.feature.slice('agent-'.length))
                           return <>
-                            <span className="text-lg">{agent?.emoji ?? '🤖'}</span>
-                            <span className="text-xs text-ink-500">{agent?.name ?? c.feature}</span>
+                            <span className="shrink-0 text-lg">{agent?.emoji ?? '🤖'}</span>
+                            <span className="truncate text-xs text-ink-500">{agent?.name ?? c.feature}</span>
                           </>
                         }
                         const feature = getFeature(c.feature)
                         return <>
-                          <span className="text-lg">{feature?.emoji ?? '💬'}</span>
-                          <span className="text-xs text-ink-500">{feature?.title ?? c.feature}</span>
+                          <span className="shrink-0 text-lg">{feature?.emoji ?? '💬'}</span>
+                          <span className="truncate text-xs text-ink-500">{feature?.title ?? c.feature}</span>
                         </>
                       })()}
-                      <span className="text-xs text-ink-400">·</span>
-                      <span className="text-xs text-ink-400">
+                      {hasImage && <span className="rounded bg-sky-50 px-1.5 py-0.5 text-[10px] text-sky-700">含图片</span>}
+                    </div>
+                    <div className="mt-1 truncate font-medium text-ink-900">{c.title}</div>
+                    {lastMessage && (
+                      <div className="mt-1 line-clamp-3 text-xs leading-relaxed text-ink-500">
+                        {lastMessage.content.slice(0, 180)}
+                      </div>
+                    )}
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleDelete(c.id)
+                    }}
+                    className="shrink-0 px-1 py-1 text-xs text-ink-400 hover:text-red-600"
+                    title="删除"
+                  >
+                    x
+                  </button>
+                </div>
+                <div className="mt-auto flex items-center justify-between gap-2 pt-3">
+                  <span className="text-xs text-ink-400">
                         {new Date(c.updatedAt).toLocaleString('zh-CN', {
                           month: 'numeric',
                           day: 'numeric',
                           hour: '2-digit',
                           minute: '2-digit'
                         })}
-                      </span>
-                    </div>
-                    <div className="font-medium text-ink-900 mt-1 truncate">{c.title}</div>
-                    {lastMessage && (
-                      <div className="text-xs text-ink-500 mt-1 line-clamp-2">
-                        {lastMessage.content.slice(0, 120)}
-                      </div>
-                    )}
-                  </div>
+                  </span>
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
-                      handleDelete(c.id)
+                      enterConversation(c)
                     }}
-                    className="text-ink-400 hover:text-red-600 text-xs px-1 py-1"
-                    title="删除"
+                    className="btn-primary !px-3 !py-1.5 text-xs"
                   >
-                    ✕
+                    继续会话
                   </button>
                 </div>
-              </button>
+              </article>
             )
           })}
         </div>

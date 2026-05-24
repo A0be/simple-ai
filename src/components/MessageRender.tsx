@@ -8,7 +8,7 @@ interface Props {
   message: ChatMessage
   streaming?: boolean
   toolResults: Record<string, { text: string; error?: boolean }>
-  runningCalls: Set<string>
+  runningCalls: Map<string, string>
   retryInfo?: { attempt: number; total: number; reason: string } | null
 }
 

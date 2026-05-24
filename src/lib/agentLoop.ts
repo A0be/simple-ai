@@ -24,7 +24,7 @@ const READ_ONLY_TOOLS = new Set([
   'FileRead', 'Glob', 'Grep', 'WebFetch', 'WebSearch',
   'TaskList', 'TaskGet', 'TaskOutput', 'TodoWrite',
   'LspDefinition', 'LspReferences', 'LspHover', 'LspList',
-  'ImageGenerate', 'VideoGenerate'
+  'ImageGenerate'
 ])
 
 function isReadOnlyTool(name: string): boolean {
@@ -147,6 +147,8 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
       onFinish?.()
       return
     }
+    const imageOnlyTurn = streamedToolCalls.length > 0 && streamedToolCalls.every((tc) => tc.name === 'ImageGenerate')
+    let imageTurnHadError = false
 
     // Dispatch each tool_call — run concurrency-safe tools in parallel
     const concurrentCalls: { tc: ToolCall; def: ToolDef }[] = []
@@ -185,6 +187,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
       for (const { tc, result } of results) {
         const toolMsg: ChatMessage = { role: 'tool', tool_call_id: tc.id, name: tc.name, content: result.content }
         messages.push(toolMsg)
+        if (tc.name === 'ImageGenerate' && result.isError) imageTurnHadError = true
         onToolEnd?.(tc, result)
       }
     } else if (concurrentCalls.length === 1) {
@@ -225,7 +228,13 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
       }
       const toolMsg: ChatMessage = { role: 'tool', tool_call_id: tc.id, name: tc.name, content: result.content }
       messages.push(toolMsg)
+      if (tc.name === 'ImageGenerate' && result.isError) imageTurnHadError = true
       onToolEnd?.(tc, result)
+    }
+
+    if (imageOnlyTurn && !imageTurnHadError) {
+      onFinish?.()
+      return
     }
   }
 

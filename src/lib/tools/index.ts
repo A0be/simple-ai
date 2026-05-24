@@ -40,7 +40,6 @@ import {
   LspListTool
 } from './builtin/lsp'
 import { ImageGenerateTool } from './builtin/imageGen'
-import { VideoGenerateTool } from './builtin/videoGen'
 import { PowerShellTool } from './builtin/powerShell'
 import { SleepTool } from './builtin/sleep'
 import { ToolSearchTool } from './builtin/toolSearch'
@@ -103,7 +102,6 @@ export function buildRegistry(): ToolRegistry {
     LspListTool,
     // multimodal
     ImageGenerateTool,
-    VideoGenerateTool
   ])
   // Merge in dynamically-discovered MCP tools from any active clients.
   for (const mc of activeMcpClients()) {

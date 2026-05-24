@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   marketplaceFetch: (args) => ipcRenderer.invoke('marketplace:fetch_text', args),
   // Media persistence
   mediaSave: (args) => ipcRenderer.invoke('media:save', args),
+  mediaSaveAs: (args) => ipcRenderer.invoke('media:save_as', args),
   // Auto-updater
   updaterStatus: () => ipcRenderer.invoke('updater:status'),
   updaterCheck: () => ipcRenderer.invoke('updater:check'),
@@ -34,23 +35,4 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('minitoken-session', handler)
     return () => ipcRenderer.removeListener('minitoken-session', handler)
   },
-  // Terminal / PTY
-  termInfo: () => ipcRenderer.invoke('terminal:info'),
-  termCreate: (args) => ipcRenderer.invoke('terminal:create', args),
-  termInput: (args) => ipcRenderer.invoke('terminal:input', args),
-  termResize: (args) => ipcRenderer.invoke('terminal:resize', args),
-  termKill: (args) => ipcRenderer.invoke('terminal:kill', args),
-  onTermData: (id, cb) => {
-    const handler = (_, data) => cb(data)
-    ipcRenderer.on(`terminal:data:${id}`, handler)
-    return () => ipcRenderer.removeListener(`terminal:data:${id}`, handler)
-  },
-  onTermExit: (id, cb) => {
-    const handler = (_, code) => cb(code)
-    ipcRenderer.on(`terminal:exit:${id}`, handler)
-    return () => ipcRenderer.removeListener(`terminal:exit:${id}`, handler)
-  },
-  // Claude CLI management
-  claudeInfo: () => ipcRenderer.invoke('claude:info'),
-  claudeSetup: (args) => ipcRenderer.invoke('claude:setup', args || {}),
 })

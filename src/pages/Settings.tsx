@@ -468,38 +468,22 @@ export default function Settings() {
         </div>
       </details>
 
-      {/* Multi-model config */}
+      {/* Image model config */}
       <details className="card p-4 text-sm">
         <summary className="cursor-pointer font-medium text-ink-800">
-          🎨 多模态模型配置（图像/音频/视频）
+          🎨 图像生成模型配置
         </summary>
         <div className="mt-3 space-y-4">
           <p className="text-xs text-ink-500">
-            留空时默认走 <strong>minitoken.top</strong> 的对应 API，主 API Key 需对 MiniToken 有效。
+            留空时默认走 <strong>minitoken.top</strong> 的 gpt-image-2 模型，主 API Key 需对 MiniToken 有效。
             如要走其他端点，请完整填写 baseUrl + Key + 模型。
           </p>
           <ModelEndpointEditor
             label="图像生成模型"
-            hint="gpt-image-1 / gpt-image-2 / dall-e-3 / midjourney"
+            hint="gpt-image-2 / gpt-image-1 / dall-e-3 / midjourney"
             value={config.imageModel}
             onChange={(v) => setConfig(c => ({ ...c, imageModel: v }))}
-            suggestedModels={['gpt-image-1', 'gpt-image-2', 'dall-e-3', 'midjourney', 'flux-1', 'seedream-3']}
-            mainConfig={{ baseUrl: config.baseUrl, apiKey: config.apiKey }}
-          />
-          <ModelEndpointEditor
-            label="音频模型（TTS/STT）"
-            hint="tts-1 / whisper-1"
-            value={config.audioModel}
-            onChange={(v) => setConfig(c => ({ ...c, audioModel: v }))}
-            suggestedModels={['tts-1', 'tts-1-hd', 'whisper-1', 'gpt-4o-audio']}
-            mainConfig={{ baseUrl: config.baseUrl, apiKey: config.apiKey }}
-          />
-          <ModelEndpointEditor
-            label="视频生成模型"
-            hint="veo-2 / sora-2 / kling-video"
-            value={config.videoModel}
-            onChange={(v) => setConfig(c => ({ ...c, videoModel: v }))}
-            suggestedModels={['veo-2', 'veo-3', 'sora-2', 'kling-video', 'seedance-1-6', 'minimax-hailuo']}
+            suggestedModels={['gpt-image-2', 'gpt-image-1', 'dall-e-3', 'midjourney', 'flux-1', 'seedream-3']}
             mainConfig={{ baseUrl: config.baseUrl, apiKey: config.apiKey }}
           />
         </div>
